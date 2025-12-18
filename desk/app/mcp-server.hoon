@@ -103,7 +103,7 @@
                 *cord
             ==
           ::
-              [~ [%s %'notifications/initalized']]
+              [~ [%s %'notifications/initialized']]
             :_  this
             (send [200 ~ [%application-json *cord]])
           ::
