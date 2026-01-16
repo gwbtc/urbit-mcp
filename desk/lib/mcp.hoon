@@ -59,16 +59,39 @@
 ::
 ++  mcp-initialize
   |=  [server-name=@t version=@t id=(unit json)]
+  ^-  json
   %-  pairs:enjs:format
   %+  welp
     ?~(id ~ ['id' u.id]~)
   :~  ['jsonrpc' s+'2.0']
       :-  'result'
       %-  pairs:enjs:format
+      ::  XX needs to be up-to-date with whatever
+      ::     the MCP client says its own version is
       :~  ['protocolVersion' s+'2024-11-05']
           :-  'capabilities'
           %-  pairs:enjs:format
           :~  :-  'tools'
+              (pairs:enjs:format ~[['listChanged' b+%.n]])
+              ::  XX change listChanged to %.y once
+              ::     real-time notifs are implemented
+              (pairs:enjs:format ~[['listChanged' b+%.n]])
+              :-  'resources'
+              ::  XX change listChanged to %.y once real-time
+              ::     notifications are implemented
+              ::  XX subscribe %.y once we can %watch resources
+              ::     can't use resources for scry paths AND
+              ::     watch paths until we have sticky-scry
+              ::     in which case we can interpret the
+              ::     subscribe request as a %watch or
+              ::     sticky-scry as appropriate
+              %-  pairs:enjs:format
+              :~  ['subscribe' b+%.n]
+                  ['listChanged' b+%.n]
+              ==
+              :-  'prompts'
+              ::  XX change listChanged to %.y once
+              ::     real-time notifs are implemented
               (pairs:enjs:format ~[['listChanged' b+%.n]])
           ==
           :-  'serverInfo'
