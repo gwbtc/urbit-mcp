@@ -22,6 +22,7 @@
   $:  =name
       =desc
       parameters=(map name parameter-def)
+      required=(list @t)
       =card:agent:gall
   ==
 ::
