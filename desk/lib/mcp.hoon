@@ -16,6 +16,18 @@
 ++  rpc-internal-error    ~.-32603
 ::  JSON-RPC helper functions
 ::
+++  defaults
+  |%
+  ++  tools
+    ^-  (list tool:mcp)
+    *(list tool:mcp)
+  ++  resources
+    ^-  (list resource:mcp)
+    *(list resource:mcp)
+  ++  prompts
+    ^-  (list prompt:mcp)
+    *(list prompt:mcp)
+  --
 ++  rpc-error
   |=  [code=@ta message=@t id=(unit json)]
   %-  pairs:enjs:format
@@ -72,7 +84,6 @@
           :-  'capabilities'
           %-  pairs:enjs:format
           :~  :-  'tools'
-              (pairs:enjs:format ~[['listChanged' b+%.n]])
               ::  XX change listChanged to %.y once
               ::     real-time notifs are implemented
               (pairs:enjs:format ~[['listChanged' b+%.n]])
