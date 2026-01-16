@@ -22,19 +22,24 @@
 +*  this   .
     def    ~(. (default-agent this %|) bowl)
 ::
-++  on-arvo   on-arvo:def
 ++  on-fail   on-fail:def
 ++  on-load   on-load:def
 ++  on-peek   on-peek:def
 ++  on-save   on-save:def
 ++  on-agent  on-agent:def
 ++  on-leave  on-leave:def
-++  on-watch  on-watch:def
 ++  on-init
   ^-  (quip card _this)
-  ::  XX bind /apps/mcp-server/api endpoint in Eyre
-  ::  XX populate state with defaults
-  `this
+  :-  :~  :*  %pass  /eyre/connect
+              %arvo  %e  %connect
+              [`/apps/mcp-server/api dap.bowl]
+          ==
+      ==
+  %=  this
+    tools      (sy tools:defaults:ml)
+    resources  (sy resources:defaults:ml)
+    prompts    (sy prompts:defaults:ml)
+  ==
 ::
 ++  on-poke
   |=  [=mark =vase]
@@ -96,26 +101,49 @@
             %:  send
                 200
                 ~
-                :-  %application-json
-                ::  XX remove server-name and version args?
-                ::  XX pass in mcp stuff from agent state
-                ::  (mcp-initialize:ml 'mcp-server' '1.0.0' eyre-id)
-                *cord
+                %json
+                ::  XX put fake/dev ship @p in the server title
+                ::  XX use an actual version number
+                %:  mcp-initialize:ml
+                    (crip "{<our.bowl>} urbit mcp server")
+                    '1.0.0'
+                    id
+                ==
             ==
           ::
               [~ [%s %'notifications/initialized']]
             :_  this
-            (send [200 ~ [%application-json *cord]])
+            (send [200 ~ [%json *json]])
           ::
               [~ [%s %'tools/list']]
             :_  this
-            (send [200 ~ [%application-json *cord]])
+            (send [200 ~ [%json *json]])
           ::
               [~ [%s %'tools/call']]
             :_  this
-            (send [200 ~ [%application-json *cord]])
+            (send [200 ~ [%json *json]])
           ==
         ==
       ==
   --
+++  on-arvo
+  |=  [=(pole knot) =sign-arvo]
+  ^-  (quip card _this)
+  ?+    pole
+      ~_  leaf/"mcp-server: unrecognized wire {<`path`pole>}"
+      !!
+      [%eyre %connect ~]
+    ?>  ?=([%eyre %bound *] sign-arvo)
+    ?:  accepted.sign-arvo
+      `this
+    %-  (slog leaf/"mcp-server: failed to bind {<dap.bowl>} to /apps/mcp-server/api" ~)
+    `this
+  ==
+++  on-watch
+  |=  =(pole knot)
+  ^-  (quip card _this)
+  ?+    pole  (on-watch:def `path`pole)
+      [%http-response eyre-id=@ta ~]
+    `this
+  ==
 --
