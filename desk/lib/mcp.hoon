@@ -20,7 +20,13 @@
   |%
   ++  tools
     ^-  (list tool:mcp)
-    *(list tool:mcp)
+    :~  :*  'test'
+            'this is a test mcp tool'
+            parameters:*tool:mcp
+            required:*tool:mcp
+            *card:agent:gall
+        ==
+    ==
   ++  resources
     ^-  (list resource:mcp)
     *(list resource:mcp)
@@ -69,7 +75,18 @@
       ==
   ==
 ::
-++  mcp-initialize
+++  param-type-to-json
+  |=  type=parameter-type:mcp
+  ^-  @t
+  ?-  type
+    %string   'string'
+    %number   'number'
+    %boolean  'boolean'
+    %array    'array'
+    %object   'object'
+  ==
+::
+++  mcp-tools-list
   |=  [server-name=@t version=@t id=(unit json)]
   ^-  json
   %-  pairs:enjs:format
@@ -86,7 +103,33 @@
           :~  :-  'tools'
               ::  XX change listChanged to %.y once
               ::     real-time notifs are implemented
-              (pairs:enjs:format ~[['listChanged' b+%.n]])
+              ::  %-  pairs:enjs:format
+              ::  :~  ['listChanged' b+%.n]
+              :-  %a
+              %+  turn
+                tools:defaults
+              |=  =tool:mcp
+              ^-  json
+              =/  properties=(map @t json)
+                %-  ~(run by parameters.tool)
+                |=  param=parameter-def:mcp
+                %-  pairs:enjs:format
+                :~  ['type' s+(param-type-to-json parameter-type.param)]
+                    ['description' s+desc.param]
+                ==
+              ::  Convert required list to JSON array
+              =/  required-array=(list json)
+                (turn required.tool |=(f=@t s+f))
+              %-  pairs:enjs:format
+              :~  ['name' [%s name.tool]]
+                  ['description' [%s desc.tool]]
+                  :-  'inputSchema'
+                  %-  pairs:enjs:format
+                  :~  ['type' [%s 'object']]
+                      ['properties' [%o properties]]
+                      ['required' [%a required-array]]
+                  ==
+              ==
               :-  'resources'
               ::  XX change listChanged to %.y once real-time
               ::     notifications are implemented
@@ -127,16 +170,6 @@
 ::
 ::  Convert parameter-type to JSON type string
 ::
-++  param-type-to-json
-  |=  type=parameter-type:mcp
-  ^-  @t
-  ?-  type
-    %string   'string'
-    %number   'number'
-    %boolean  'boolean'
-    %array    'array'
-    %object   'object'
-  ==
 ::
 ::  Convert tool-def from lib/tools to MCP JSON format
 ::

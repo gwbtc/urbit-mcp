@@ -26,6 +26,9 @@
       =card:agent:gall
   ==
 ::
-+$  resource  *
++$  resource
+  $+  mcp-resource
+  $:  =name
+  ==
 +$  prompt    *
 --

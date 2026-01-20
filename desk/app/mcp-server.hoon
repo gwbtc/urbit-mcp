@@ -98,16 +98,30 @@
             ::  XX check protocol version?
             ::     would mean we have to declare compat
             :_  this
-            %:  send
-                200
+            %-  send
+            :^    200
                 ~
-                %json
-                ::  XX put fake/dev ship @p in the server title
-                ::  XX use an actual version number
-                %:  mcp-initialize:ml
-                    (crip "{<our.bowl>} urbit mcp server")
-                    '1.0.0'
-                    id
+              %json
+            ::  *json
+            %-  pairs:enjs:format
+            %+  welp
+              ?~(id ~ ['id' u.id]~)
+            :~  ['jsonrpc' s+'2.0']
+                :-  'result'
+                %-  pairs:enjs:format
+                :~  ['protocolVersion' s+'2024-11-05']
+                    :-  'capabilities'
+                    %-  pairs:enjs:format
+                    :~  :-  'tools'
+                        ::  XX change to %.y once we support listChanged notifs
+                        (pairs:enjs:format ~[['listChanged' b+%.n]])
+                    ==
+                    :-  'serverInfo'
+                    %-  pairs:enjs:format
+                    ::  XX specify real or fake in the server name
+                    :~  ['name' s+(crip "{<our.bowl>} urbit mcp server")]
+                        ['version' s+'1.0.0']
+                    ==
                 ==
             ==
           ::
@@ -117,7 +131,18 @@
           ::
               [~ [%s %'tools/list']]
             :_  this
-            (send [200 ~ [%json *json]])
+            %:  send
+                200
+                ~
+                %json
+                ::  XX put fake/dev ship @p in the server title
+                ::  XX use an actual version number
+                %:  mcp-tools-list:ml
+                    (crip "{<our.bowl>} urbit mcp server")
+                    '1.0.0'
+                    id
+                ==
+            ==
           ::
               [~ [%s %'tools/call']]
             :_  this
