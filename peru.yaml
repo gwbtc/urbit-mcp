@@ -19,6 +19,8 @@ git module base-dev:
     - pkg/base-dev/lib/default-agent.hoon
     - pkg/base-dev/lib/server.hoon
     - pkg/base-dev/lib/skeleton.hoon
+    - pkg/base-dev/lib/strand.hoon
+    - pkg/base-dev/lib/strandio.hoon
     - pkg/base-dev/lib/verb.hoon
     - pkg/base-dev/mar/bill.hoon
     - pkg/base-dev/mar/kelvin.hoon
@@ -26,6 +28,7 @@ git module base-dev:
     - pkg/base-dev/mar/mime.hoon
     - pkg/base-dev/mar/hoon.hoon
     - pkg/base-dev/sur/verb.hoon
+    - pkg/base-dev/sur/spider.hoon
   rev: 41dd3b5f7c554ac615d0db9eaa5fe46071d47bc8
 #
 # git module tlon-lib:

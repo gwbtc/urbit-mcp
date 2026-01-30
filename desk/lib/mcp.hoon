@@ -1,5 +1,5 @@
-/-  mcp
-/+  server, json-utils
+/-  mcp, spider
+/+  server, strandio, json-utils
 |%
 ::  MCP (Model Context Protocol) - JSON-RPC 2.0 Protocol Adapter
 ::  This library provides a thin protocol layer that:
@@ -20,13 +20,34 @@
   |%
   ++  tools
     ^-  (list tool:mcp)
-    :~  :*  'test'
-            'this is a test mcp tool'
-            parameters:*tool:mcp
-            required:*tool:mcp
-            *card:agent:gall
+    :~  :*  'get our Urbit ID'
+            'get the Urbit ID / @p of this ship'
+            ~
+            ~
+            ::  thread-builder:*tool:mcp
+            |=  *
+            =/  m  (strand:spider ,json)
+            ^-  form:m
+            ;<    =bowl:rand
+                bind:m
+              get-bowl:strandio
+            (pure:m [%s (crip "{<our.bowl>}")])
         ==
     ==
+::    :~  :*  'set Behn timer'
+::            'set a Behn timer for testing purposes'
+::            (my ['duration' [%string 'relative duration from now in Urbit @dr format: ~s1, ~m1, ~h1, ~d1, ~w1, ~y1']]~)
+::            ['duration']~
+::            ^-  shed:khan
+::            ::  XX  pseudocode
+::            %-  hoon-eval
+::            """
+::            =/  m  (strand:strandio ,vase)
+::            """
+::            :~  '[%pass /0x0/1 %arvo %b %wait (add now.bowl {<duration>})]'
+::            ==
+::        ==
+::    ==
   ++  resources
     ^-  (list resource:mcp)
     *(list resource:mcp)
@@ -88,7 +109,7 @@
   ==
 ::
 ++  mcp-tools-list
-  |=  [server-name=@t version=@t id=(unit json)]
+  |=  id=(unit json)
   ^-  json
   %-  pairs:enjs:format
   %+  welp
@@ -96,63 +117,31 @@
   :~  ['jsonrpc' s+'2.0']
       :-  'result'
       %-  pairs:enjs:format
-      ::  XX needs to be up-to-date with whatever
-      ::     the MCP client says its own version is
-      :~  ['protocolVersion' s+'2024-11-05']
-          :-  'capabilities'
+      :~  :-  'tools'
+          :-  %a
+          %+  turn
+            tools:defaults
+          |=  =tool:mcp
+          ^-  json
+          =/  properties=(map @t json)
+            %-  ~(run by parameters.tool)
+            |=  param=parameter-def:mcp
+            %-  pairs:enjs:format
+            :~  ['type' s+(param-type-to-json parameter-type.param)]
+                ['description' s+desc.param]
+            ==
+          ::  Convert required list to JSON array
+          =/  required-array=(list json)
+            (turn required.tool |=(f=@t s+f))
           %-  pairs:enjs:format
-          :~  :-  'tools'
-              ::  XX change listChanged to %.y once
-              ::     real-time notifs are implemented
-              ::  %-  pairs:enjs:format
-              ::  :~  ['listChanged' b+%.n]
-              :-  %a
-              %+  turn
-                tools:defaults
-              |=  =tool:mcp
-              ^-  json
-              =/  properties=(map @t json)
-                %-  ~(run by parameters.tool)
-                |=  param=parameter-def:mcp
-                %-  pairs:enjs:format
-                :~  ['type' s+(param-type-to-json parameter-type.param)]
-                    ['description' s+desc.param]
-                ==
-              ::  Convert required list to JSON array
-              =/  required-array=(list json)
-                (turn required.tool |=(f=@t s+f))
+          :~  ['name' [%s name.tool]]
+              ['description' [%s desc.tool]]
+              :-  'inputSchema'
               %-  pairs:enjs:format
-              :~  ['name' [%s name.tool]]
-                  ['description' [%s desc.tool]]
-                  :-  'inputSchema'
-                  %-  pairs:enjs:format
-                  :~  ['type' [%s 'object']]
-                      ['properties' [%o properties]]
-                      ['required' [%a required-array]]
-                  ==
+              :~  ['type' [%s 'object']]
+                  ['properties' [%o properties]]
+                  ['required' [%a required-array]]
               ==
-              :-  'resources'
-              ::  XX change listChanged to %.y once real-time
-              ::     notifications are implemented
-              ::  XX subscribe %.y once we can %watch resources
-              ::     can't use resources for scry paths AND
-              ::     watch paths until we have sticky-scry
-              ::     in which case we can interpret the
-              ::     subscribe request as a %watch or
-              ::     sticky-scry as appropriate
-              %-  pairs:enjs:format
-              :~  ['subscribe' b+%.n]
-                  ['listChanged' b+%.n]
-              ==
-              :-  'prompts'
-              ::  XX change listChanged to %.y once
-              ::     real-time notifs are implemented
-              (pairs:enjs:format ~[['listChanged' b+%.n]])
-          ==
-          :-  'serverInfo'
-          %-  pairs:enjs:format
-          :~  ['name' s+server-name]
-              ['version' s+version]
           ==
       ==
   ==

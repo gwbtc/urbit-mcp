@@ -23,9 +23,20 @@
     def    ~(. (default-agent this %|) bowl)
 ::
 ++  on-fail   on-fail:def
-++  on-load   on-load:def
 ++  on-peek   on-peek:def
-++  on-save   on-save:def
+++  on-save
+  ^-  vase
+  !>(state)
+::
+++  on-load
+  |=  =vase
+  ^-  (quip card _this)
+  =/  old  !<(versioned-state vase)
+  ?-    -.old
+      %0
+    `this(state old)
+  ==
+::
 ++  on-agent  on-agent:def
 ++  on-leave  on-leave:def
 ++  on-init
@@ -57,17 +68,16 @@
     ^-  (list card)
     =+  send=(cury response:schooner eyre-id)
     ::  XX proper error code
-    %-  send
-    :*  405
-        ~
-        :-  %application-json
-        *cord
+    %^    send
+        405
+      ~
+    :-  %json
+    *json
   ::      %:  rpc-error:ml
   ::          rpc-method-not-found:ml
   ::          'Method not found'
   ::          eyre-id
   ::      ==
-    ==
   ++  handle-req
     |=  [eyre-id=@ta req=inbound-request:eyre]
     ^-  (quip card _this)
@@ -84,6 +94,7 @@
         (get-header:http 'content-type' header-list.request.req)
       ::  XX better error
       ?+  content-type
+        ~&  >  %content-type-error
         [(send [405 ~ [%stock ~]]) this]
       ::
           [~ %'application/json']
@@ -91,6 +102,7 @@
           (de:json:html q:(need body.request.req))
         ?~  parsed
           ::  XX better error
+          ~&  >  %failed-to-parse
           [(send [405 ~ [%stock ~]]) this]
         %.  u.parsed
         |=  jon=json
@@ -99,20 +111,24 @@
         ?+  method
           [(rpc-method-not-found eyre-id) this]
         ::
+            [~ [%s %'notifications/initialized']]
+          [(send [200 ~ [%stock ~]]) this]
+        ::
             [~ [%s %'initialize']]
+          ::  XX check protocol version?
+          ::     would mean we have to declare compat
           :_  this
-          %^    send
-              200
-            ~
-          :-  %json
+          %-  send
+          :^    200
+              ~
+            %json
+          ::  *json
           %-  pairs:enjs:format
           %+  welp
             ?~(id ~ ['id' u.id]~)
           :~  ['jsonrpc' s+'2.0']
               :-  'result'
               %-  pairs:enjs:format
-              ::  XX check protocol version?
-              ::     would mean we have to declare compat
               :~  ['protocolVersion' s+'2024-11-05']
                   :-  'capabilities'
                   %-  pairs:enjs:format
@@ -137,24 +153,16 @@
           :-  %json
           ::  XX put fake/dev ship @p in the server title
           ::  XX use an actual version number
-          %:  mcp-tools-list:ml
-              (crip "{<our.bowl>} urbit mcp server")
-              '1.0.0'
-              id
-          ==
+          (mcp-tools-list:ml id)
         ::
             [~ [%s %'tools/call']]
           :_  this
-          %^    send
-              200
-            ~
-          :-  %json
           =/  tool-name=(unit json)
             (~(get jo:ju jon) /params/name)
           ?~  tool-name
-            (rpc-error:ml rpc-invalid-params:ml 'Missing tool name' id)
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing tool name' id))
           ?.  ?=([%s *] u.tool-name)
-            (rpc-error:ml rpc-invalid-params:ml 'Invalid tool name' id)
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid tool name' id))
           =/  tool-results
             %+  murn
               ~(tap in tools)
@@ -165,19 +173,37 @@
               ~
             `foo
           ?~  tool-results
-            (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<tool-name>} not found") id)
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<tool-name>} not found") id))
           ?:  (gth 1 (lent tool-results))
-            (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<tool-name>} tools found") id)
+            (send 200 ~ %json (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<tool-name>} tools found") id))
           =/  arguments=(unit json)
             (~(get jo:ju jon) /params/arguments)
           ?~  arguments
-            (rpc-error:ml rpc-invalid-params:ml 'Missing arguments' id)
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing arguments' id))
           ?.  ?=([%o *] u.arguments)
-            (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id)
-          ::  XX construct cards and args from the
-          ::     correpsonding tool in our state
-          ::  XX put eyre-id and JSON RPC ID in the callback wire
-          *json
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id))
+          ^-  (list card)
+          ::  XX not sure about /[id] cause it's a unit
+          ::     should we just have crashed by now if id was ~
+          ::  XX  append id to this wire
+          :~  :*  %pass  /(scot %ta eyre-id)
+                  %arvo  %k
+                  ::  make map of u.arguments
+                  ::  %lard  (thread-builder.i.tool-results u.arguments)
+                  %lard  q.byk.bowl
+                  ::  (thread-builder:*tool:mcp *(map @t json))
+                  *shed:khan
+              ==
+          ==
+::          :~  :*  %pass  /[eyre-id]/[id]
+::                  %arvo  %k
+::                  :*  %fard
+::                      q.byk.bowl
+::                      (@tas p.u.tool-name)
+::                      *cage
+::                  ==
+::              ==
+::          ==
         ==
       ==
     ==

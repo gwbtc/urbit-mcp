@@ -1,3 +1,5 @@
+/-  spider
+/+  strandio
 |%
 +$  name  @t
 +$  desc  @t
@@ -23,7 +25,7 @@
       =desc
       parameters=(map name parameter-def)
       required=(list @t)
-      =card:agent:gall
+      thread-builder=$-((map @t json) _*form:(strand:spider ,json))
   ==
 ::
 +$  resource
