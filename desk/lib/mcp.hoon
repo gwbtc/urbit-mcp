@@ -36,6 +36,7 @@
   --
 ++  rpc-error
   |=  [code=@ta message=@t id=(unit json)]
+  ^-  json
   %-  pairs:enjs:format
   %+  welp
     ?~(id ~ ['id' u.id]~)

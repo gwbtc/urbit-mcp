@@ -68,88 +68,119 @@
   ::          eyre-id
   ::      ==
     ==
-    ++  handle-req
-      |=  [eyre-id=@ta req=inbound-request:eyre]
-      ^-  (quip card _this)
-      =/  lin=request-line:server
-        (parse-request-line:server url.request.req)
-      ::  =/  site=(list @t)  site.lin
-      =+  send=(cury response:schooner eyre-id)
-      ?+      method.request.req
-            ::  XX better error
-            [(send [405 ~ [%stock ~]]) this]
-          %'POST'
-        =/  content-type=(unit @t)
-          (get-header:http 'content-type' header-list.request.req)
-        ::  XX better error
-        ?+    content-type  [(send [405 ~ [%stock ~]]) this]
-            [~ %'application/json']
-          =/  parsed=(unit json)
-            (de:json:html q:(need body.request.req))
-          ?~  parsed
-            ::  XX better error
-            [(send [405 ~ [%stock ~]]) this]
-          %.  u.parsed
-          |=  jon=json
-          =/  id=(unit json)      (~(get jo:ju jon) /id)
-          =/  method=(unit json)  (~(get jo:ju jon) /method)
-          ?+    method  [(rpc-method-not-found eyre-id) this]
-              [~ [%s %'initialize']]
-            ::  XX check protocol version?
-            ::     would mean we have to declare compat
-            :_  this
-            %-  send
-            :^    200
-                ~
-              %json
-            ::  *json
-            %-  pairs:enjs:format
-            %+  welp
-              ?~(id ~ ['id' u.id]~)
-            :~  ['jsonrpc' s+'2.0']
-                :-  'result'
-                %-  pairs:enjs:format
-                :~  ['protocolVersion' s+'2024-11-05']
-                    :-  'capabilities'
-                    %-  pairs:enjs:format
-                    :~  :-  'tools'
-                        ::  XX change to %.y once we support listChanged notifs
-                        (pairs:enjs:format ~[['listChanged' b+%.n]])
-                    ==
-                    :-  'serverInfo'
-                    %-  pairs:enjs:format
-                    ::  XX specify real or fake in the server name
-                    :~  ['name' s+(crip "{<our.bowl>} urbit mcp server")]
-                        ['version' s+'1.0.0']
-                    ==
-                ==
-            ==
-          ::
-              [~ [%s %'notifications/initialized']]
-            :_  this
-            (send [200 ~ [%json *json]])
-          ::
-              [~ [%s %'tools/list']]
-            :_  this
-            %:  send
-                200
-                ~
-                %json
-                ::  XX put fake/dev ship @p in the server title
-                ::  XX use an actual version number
-                %:  mcp-tools-list:ml
-                    (crip "{<our.bowl>} urbit mcp server")
-                    '1.0.0'
-                    id
-                ==
-            ==
-          ::
-              [~ [%s %'tools/call']]
-            :_  this
-            (send [200 ~ [%json *json]])
+  ++  handle-req
+    |=  [eyre-id=@ta req=inbound-request:eyre]
+    ^-  (quip card _this)
+    =/  lin=request-line:server
+      (parse-request-line:server url.request.req)
+    ::  =/  site=(list @t)  site.lin
+    =+  send=(cury response:schooner eyre-id)
+    ?+  method.request.req
+      ::  XX better error
+      [(send [405 ~ [%stock ~]]) this]
+    ::
+        %'POST'
+      =/  content-type=(unit @t)
+        (get-header:http 'content-type' header-list.request.req)
+      ::  XX better error
+      ?+  content-type
+        [(send [405 ~ [%stock ~]]) this]
+      ::
+          [~ %'application/json']
+        =/  parsed=(unit json)
+          (de:json:html q:(need body.request.req))
+        ?~  parsed
+          ::  XX better error
+          [(send [405 ~ [%stock ~]]) this]
+        %.  u.parsed
+        |=  jon=json
+        =/  id=(unit json)      (~(get jo:ju jon) /id)
+        =/  method=(unit json)  (~(get jo:ju jon) /method)
+        ?+  method
+          [(rpc-method-not-found eyre-id) this]
+        ::
+            [~ [%s %'initialize']]
+          :_  this
+          %^    send
+              200
+            ~
+          :-  %json
+          %-  pairs:enjs:format
+          %+  welp
+            ?~(id ~ ['id' u.id]~)
+          :~  ['jsonrpc' s+'2.0']
+              :-  'result'
+              %-  pairs:enjs:format
+              ::  XX check protocol version?
+              ::     would mean we have to declare compat
+              :~  ['protocolVersion' s+'2024-11-05']
+                  :-  'capabilities'
+                  %-  pairs:enjs:format
+                  :~  :-  'tools'
+                      ::  XX change to %.y once we support listChanged notifs
+                      (pairs:enjs:format ~[['listChanged' b+%.n]])
+                  ==
+                  :-  'serverInfo'
+                  %-  pairs:enjs:format
+                  ::  XX specify real or fake in the server name
+                  :~  ['name' s+(crip "{<our.bowl>} urbit mcp server")]
+                      ['version' s+'1.0.0']
+                  ==
+              ==
           ==
+        ::
+            [~ [%s %'tools/list']]
+          :_  this
+          %^    send
+              200
+            ~
+          :-  %json
+          ::  XX put fake/dev ship @p in the server title
+          ::  XX use an actual version number
+          %:  mcp-tools-list:ml
+              (crip "{<our.bowl>} urbit mcp server")
+              '1.0.0'
+              id
+          ==
+        ::
+            [~ [%s %'tools/call']]
+          :_  this
+          %^    send
+              200
+            ~
+          :-  %json
+          =/  tool-name=(unit json)
+            (~(get jo:ju jon) /params/name)
+          ?~  tool-name
+            (rpc-error:ml rpc-invalid-params:ml 'Missing tool name' id)
+          ?.  ?=([%s *] u.tool-name)
+            (rpc-error:ml rpc-invalid-params:ml 'Invalid tool name' id)
+          =/  tool-results
+            %+  murn
+              ~(tap in tools)
+            ::  XX placeholder name
+            |=  foo=tool:mcp
+            ^-  (unit tool:mcp)
+            ?.  =(name.foo p.u.tool-name)
+              ~
+            `foo
+          ?~  tool-results
+            (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<tool-name>} not found") id)
+          ?:  (gth 1 (lent tool-results))
+            (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<tool-name>} tools found") id)
+          =/  arguments=(unit json)
+            (~(get jo:ju jon) /params/arguments)
+          ?~  arguments
+            (rpc-error:ml rpc-invalid-params:ml 'Missing arguments' id)
+          ?.  ?=([%o *] u.arguments)
+            (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id)
+          ::  XX construct cards and args from the
+          ::     correpsonding tool in our state
+          ::  XX put eyre-id and JSON RPC ID in the callback wire
+          *json
         ==
       ==
+    ==
   --
 ++  on-arvo
   |=  [=(pole knot) =sign-arvo]
