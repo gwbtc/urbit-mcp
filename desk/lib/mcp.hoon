@@ -112,43 +112,42 @@
     %object   'object'
   ==
 ::
-++  mcp-tools-list
-  |=  id=(unit json)
+++  mcp-tools-to-json
+  |=  tool-set=(set tool:mcp)
   ^-  json
   %-  pairs:enjs:format
-  %+  welp
-    ?~(id ~ ['id' u.id]~)
-  :~  ['jsonrpc' s+'2.0']
-      :-  'result'
+  :~  :-  'tools'
+      :-  %a
+      %+  turn
+        ~(tap in tool-set)
+      |=  =tool:mcp
+      ^-  json
+      =/  properties=(map @t json)
+        %-  ~(run by parameters.tool)
+        |=  param=parameter-def:mcp
+        %-  pairs:enjs:format
+        :~  ['type' s+(param-type-to-json parameter-type.param)]
+            ['description' s+desc.param]
+        ==
+      ::  Convert required list to JSON array
+      =/  required-array=(list json)
+        (turn required.tool |=(f=@t s+f))
       %-  pairs:enjs:format
-      :~  :-  'tools'
-          :-  %a
-          %+  turn
-            tools:defaults
-          |=  =tool:mcp
-          ^-  json
-          =/  properties=(map @t json)
-            %-  ~(run by parameters.tool)
-            |=  param=parameter-def:mcp
-            %-  pairs:enjs:format
-            :~  ['type' s+(param-type-to-json parameter-type.param)]
-                ['description' s+desc.param]
-            ==
-          ::  Convert required list to JSON array
-          =/  required-array=(list json)
-            (turn required.tool |=(f=@t s+f))
+      :~  ['name' [%s name.tool]]
+          ['description' [%s desc.tool]]
+          :-  'inputSchema'
           %-  pairs:enjs:format
-          :~  ['name' [%s name.tool]]
-              ['description' [%s desc.tool]]
-              :-  'inputSchema'
-              %-  pairs:enjs:format
-              :~  ['type' [%s 'object']]
-                  ['properties' [%o properties]]
-                  ['required' [%a required-array]]
-              ==
+          :~  ['type' [%s 'object']]
+              ['properties' [%o properties]]
+              ['required' [%a required-array]]
           ==
       ==
   ==
+::
+++  mcp-tools-list
+  |=  [tool-set=(set tool:mcp) id=(unit json)]
+  ^-  json
+  (rpc-result (mcp-tools-to-json tool-set) id)
 ::
 ::++  mcp-tools-list
 ::  |=  id=(unit json)

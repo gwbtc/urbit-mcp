@@ -23,7 +23,6 @@
     def    ~(. (default-agent this %|) bowl)
 ::
 ++  on-fail   on-fail:def
-++  on-peek   on-peek:def
 ++  on-save
   ^-  vase
   !>(state)
@@ -134,7 +133,7 @@
           :-  %json
           ::  XX put fake/dev ship @p in the server title
           ::  XX use an actual version number
-          (mcp-tools-list:ml id)
+          (mcp-tools-list:ml tools id)
         ::
             [~ [%s %'tools/call']]
           ?<  ?=(~ id)
@@ -176,6 +175,26 @@
       ==
     ==
   --
+++  on-peek
+  |=  =(pole knot)
+  ^-  (unit (unit cage))
+  ?+  pole  (on-peek:def `path`pole)
+    ::
+    ::  .^(json %gx /=mcp-server=/tools/json)
+    ::  read tool definitions
+    [%x %tools ~]
+      ``json+!>((mcp-tools-to-json:ml tools))
+    ::
+    ::  .^(noun %gx /=mcp-server=/resources/noun)
+    ::  read resource endpoints
+    [%x %resources ~]
+      ``noun+!>(resources)
+    ::
+    ::  .^(noun %gx /=mcp-server=/prompts/noun)
+    ::  read prompts
+    [%x %prompts ~]
+      ``noun+!>(prompts)
+  ==
 ++  on-arvo
   |=  [=(pole knot) =sign-arvo]
   ^-  (quip card _this)
