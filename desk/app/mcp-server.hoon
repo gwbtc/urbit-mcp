@@ -115,6 +115,8 @@
                   :~  :-  'tools'
                       ::  XX change to %.y once we support listChanged notifs
                       (pairs:enjs:format ~[['listChanged' b+%.n]])
+                      :-  'resources'
+                      (pairs:enjs:format ~[['subscribe' b+%.n] ['listChanged' b+%.n]])
                   ==
                   :-  'serverInfo'
                   %-  pairs:enjs:format
@@ -134,6 +136,46 @@
           ::  XX put fake/dev ship @p in the server title
           ::  XX use an actual version number
           (mcp-tools-list:ml tools id)
+        ::
+            [~ [%s %'resources/list']]
+          :_  this
+          %^    send
+              200
+            ~
+          :-  %json
+          (mcp-resources-list:ml resources id)
+        ::
+            [~ [%s %'resources/read']]
+          =/  uri=(unit json)  (~(get jo:ju jon) /params/uri)
+          ?~  uri
+            :_  this
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing resource URI' id))
+          ?.  ?=([%s *] u.uri)
+            :_  this
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid resource URI' id))
+          ?+  uri
+            :_  this
+            (send 200 ~ %json (rpc-error:ml rpc-method-not-found:ml (crip "Resource {<p.u.uri>} not found") id))
+          ::
+              [~ [%s %'/tools']]
+            :_  this
+            %^    send
+                200
+              ~
+            :-  %json
+            %-  rpc-result:ml
+            :-  %-  pairs:enjs:format
+                :~  :-  'contents'
+                    :-  %a
+                    :~  %-  pairs:enjs:format
+                        :~  ['uri' s+'/tools']
+                            ['mimeType' s+'application/json']
+                            ['text' (mcp-tools-to-json:ml tools)]
+                        ==
+                    ==
+                ==
+            id
+          ==
         ::
             [~ [%s %'tools/call']]
           ?<  ?=(~ id)

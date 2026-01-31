@@ -54,7 +54,12 @@
 ::    ==
   ++  resources
     ^-  (list resource:mcp)
-    *(list resource:mcp)
+    :~  :*  '/tools'
+            'Available Tools'
+            'List of available tools in JSON format'
+            `'application/json'
+        ==
+    ==
   ++  prompts
     ^-  (list prompt:mcp)
     *(list prompt:mcp)
@@ -148,6 +153,32 @@
   |=  [tool-set=(set tool:mcp) id=(unit json)]
   ^-  json
   (rpc-result (mcp-tools-to-json tool-set) id)
+::
+++  mcp-resources-to-json
+  |=  resource-set=(set resource:mcp)
+  ^-  json
+  %-  pairs:enjs:format
+  :~  :-  'resources'
+      :-  %a
+      %+  turn
+        ~(tap in resource-set)
+      |=  =resource:mcp
+      ^-  json
+      %-  pairs:enjs:format
+      %+  welp
+        :~  ['uri' s+uri.resource]
+            ['name' s+name.resource]
+            ['description' s+desc.resource]
+        ==
+      ?~  mime-type.resource  ~
+      :~  ['mimeType' s+u.mime-type.resource]
+      ==
+  ==
+::
+++  mcp-resources-list
+  |=  [resource-set=(set resource:mcp) id=(unit json)]
+  ^-  json
+  (rpc-result (mcp-resources-to-json resource-set) id)
 ::
 ::++  mcp-tools-list
 ::  |=  id=(unit json)

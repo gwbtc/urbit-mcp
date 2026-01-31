@@ -30,7 +30,10 @@
 ::
 +$  resource
   $+  mcp-resource
-  $:  =name
+  $:  uri=@t
+      =name
+      =desc
+      mime-type=(unit @t)
   ==
 +$  prompt    *
 --
