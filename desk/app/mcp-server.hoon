@@ -63,21 +63,6 @@
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
       ==
-  ++  rpc-method-not-found
-    |=  eyre-id=@ta
-    ^-  (list card)
-    =+  send=(cury response:schooner eyre-id)
-    ::  XX proper error code
-    %^    send
-        405
-      ~
-    :-  %json
-    *json
-  ::      %:  rpc-error:ml
-  ::          rpc-method-not-found:ml
-  ::          'Method not found'
-  ::          eyre-id
-  ::      ==
   ++  handle-req
     |=  [eyre-id=@ta req=inbound-request:eyre]
     ^-  (quip card _this)
@@ -109,7 +94,8 @@
         =/  id=(unit json)      (~(get jo:ju jon) /id)
         =/  method=(unit json)  (~(get jo:ju jon) /method)
         ?+  method
-          [(rpc-method-not-found eyre-id) this]
+          :_  this
+          (send 405 ~ %json (rpc-error:ml rpc-method-not-found:ml 'Method not found' id))
         ::
             [~ [%s %'notifications/initialized']]
           [(send [200 ~ [%none ~]]) this]
