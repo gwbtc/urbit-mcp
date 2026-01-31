@@ -62,7 +62,12 @@
     ==
   ++  prompts
     ^-  (list prompt:mcp)
-    *(list prompt:mcp)
+    :~  :*  'get-urbit-id'
+            'Get Our Urbit ID'
+            'Retrieve the Urbit ID (@p) of this ship'
+            ~
+        ==
+    ==
   --
 ++  rpc-error
   |=  [code=@ta message=@t id=(unit json)]
@@ -179,6 +184,43 @@
   |=  [resource-set=(set resource:mcp) id=(unit json)]
   ^-  json
   (rpc-result (mcp-resources-to-json resource-set) id)
+::
+++  mcp-prompts-to-json
+  |=  prompt-set=(set prompt:mcp)
+  ^-  json
+  %-  pairs:enjs:format
+  :~  :-  'prompts'
+      :-  %a
+      %+  turn
+        ~(tap in prompt-set)
+      |=  =prompt:mcp
+      ^-  json
+      %-  pairs:enjs:format
+      :~  ['name' s+name.prompt]
+          ['title' s+title.prompt]
+          ['description' s+desc.prompt]
+          :-  'arguments'
+          :-  %a
+          %+  turn
+            arguments.prompt
+          |=  arg=prompt-argument:mcp
+          ^-  json
+          %-  pairs:enjs:format
+          %+  welp
+            :~  ['name' s+name.arg]
+                ['description' s+desc.arg]
+                ['required' b+required.arg]
+            ==
+          ?~  parameter-type.arg  ~
+          :~  ['type' s+(param-type-to-json u.parameter-type.arg)]
+          ==
+      ==
+  ==
+::
+++  mcp-prompts-list
+  |=  [prompt-set=(set prompt:mcp) id=(unit json)]
+  ^-  json
+  (rpc-result (mcp-prompts-to-json prompt-set) id)
 ::
 ::++  mcp-tools-list
 ::  |=  id=(unit json)

@@ -35,5 +35,19 @@
       =desc
       mime-type=(unit @t)
   ==
-+$  prompt    *
++$  prompt-argument
+  $+  mcp-prompt-argument
+  $:  =name
+      parameter-type=(unit parameter-type)
+      =desc
+      required=?
+  ==
+::
++$  prompt
+  $+  mcp-prompt
+  $:  =name
+      title=@t
+      =desc
+      arguments=(list prompt-argument)
+  ==
 --

@@ -117,6 +117,8 @@
                       (pairs:enjs:format ~[['listChanged' b+%.n]])
                       :-  'resources'
                       (pairs:enjs:format ~[['subscribe' b+%.n] ['listChanged' b+%.n]])
+                      :-  'prompts'
+                      (pairs:enjs:format ~[['listChanged' b+%.n]])
                   ==
                   :-  'serverInfo'
                   %-  pairs:enjs:format
@@ -144,6 +146,14 @@
             ~
           :-  %json
           (mcp-resources-list:ml resources id)
+        ::
+            [~ [%s %'prompts/list']]
+          :_  this
+          %^    send
+              200
+            ~
+          :-  %json
+          (mcp-prompts-list:ml prompts id)
         ::
             [~ [%s %'resources/read']]
           =/  uri=(unit json)  (~(get jo:ju jon) /params/uri)
@@ -176,6 +186,57 @@
                 ==
             id
           ==
+        ::
+            [~ [%s %'prompts/get']]
+          =/  prompt-name=(unit json)  (~(get jo:ju jon) /params/name)
+          ?~  prompt-name
+            :_  this
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing prompt name' id))
+          ?.  ?=([%s *] u.prompt-name)
+            :_  this
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid prompt name' id))
+          =/  prompt-results
+            %+  murn
+              ~(tap in prompts)
+            |=  =prompt:mcp
+            ^-  (unit prompt:mcp)
+            ?.  =(name.prompt p.u.prompt-name)
+              ~
+            `prompt
+          ?~  prompt-results
+            :_  this
+            (send 200 ~ %json (rpc-error:ml rpc-method-not-found:ml (crip "Prompt {<p.u.prompt-name>} not found") id))
+          ?:  (gth 1 (lent prompt-results))
+            :_  this
+            (send 200 ~ %json (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<p.u.prompt-name>} prompts found") id))
+          =/  =prompt:mcp  i.prompt-results
+          :_  this
+          %^    send
+              200
+            ~
+          :-  %json
+          %-  rpc-result:ml
+          :-  %-  pairs:enjs:format
+              :~  ['name' s+name.prompt]
+                  ['title' s+title.prompt]
+                  ['description' s+desc.prompt]
+                  :-  'arguments'
+                  :-  %a
+                  %+  turn
+                    arguments.prompt
+                  |=  arg=prompt-argument:mcp
+                  ^-  json
+                  %-  pairs:enjs:format
+                  %+  welp
+                    :~  ['name' s+name.arg]
+                        ['description' s+desc.arg]
+                        ['required' b+required.arg]
+                    ==
+                  ?~  parameter-type.arg  ~
+                  :~  ['type' s+(param-type-to-json:ml u.parameter-type.arg)]
+                  ==
+              ==
+          id
         ::
             [~ [%s %'tools/call']]
           ?<  ?=(~ id)
@@ -231,6 +292,11 @@
     ::  read resource definitions
     [%x %resources ~]
       ``json+!>((mcp-resources-to-json:ml resources))
+    ::
+    ::  .^(json %gx /=mcp-server=/prompts/json)
+    ::  read prompt definitions  
+    [%x %prompts %json ~]
+      ``json+!>((mcp-prompts-to-json:ml prompts))
     ::
     ::  .^(noun %gx /=mcp-server=/prompts/noun)
     ::  read prompts
