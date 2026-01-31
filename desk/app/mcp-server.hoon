@@ -22,6 +22,8 @@
 +*  this   .
     def    ~(. (default-agent this %|) bowl)
 ::
+++  on-agent  on-agent:def
+++  on-leave  on-leave:def
 ++  on-fail   on-fail:def
 ++  on-save
   ^-  vase
@@ -36,8 +38,6 @@
     `this(state old)
   ==
 ::
-++  on-agent  on-agent:def
-++  on-leave  on-leave:def
 ++  on-init
   ^-  (quip card _this)
   :-  :~  :*  %pass  /eyre/connect
