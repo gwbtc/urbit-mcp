@@ -71,23 +71,18 @@
     ::  =/  site=(list @t)  site.lin
     =+  send=(cury response:schooner eyre-id)
     ?+  method.request.req
-      ::  XX better error
       [(send [405 ~ [%stock ~]]) this]
     ::
         %'POST'
       =/  content-type=(unit @t)
         (get-header:http 'content-type' header-list.request.req)
-      ::  XX better error
       ?+  content-type
-        ~&  >  %content-type-error
         [(send [415 ~ [%stock ~]]) this]
       ::
           [~ %'application/json']
         =/  parsed=(unit json)
           (de:json:html q:(need body.request.req))
         ?~  parsed
-          ::  XX better error
-          ~&  >  %failed-to-parse
           [(send [400 ~ [%stock ~]]) this]
         %.  u.parsed
         |=  jon=json
