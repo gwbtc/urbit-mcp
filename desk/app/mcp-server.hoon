@@ -294,14 +294,9 @@
       ``json+!>((mcp-resources-to-json:ml resources))
     ::
     ::  .^(json %gx /=mcp-server=/prompts/json)
-    ::  read prompt definitions  
-    [%x %prompts %json ~]
-      ``json+!>((mcp-prompts-to-json:ml prompts))
-    ::
-    ::  .^(noun %gx /=mcp-server=/prompts/noun)
-    ::  read prompts
+    ::  read prompt definitions
     [%x %prompts ~]
-      ``noun+!>(prompts)
+      ``json+!>((mcp-prompts-to-json:ml prompts))
   ==
 ++  on-arvo
   |=  [=(pole knot) =sign-arvo]
