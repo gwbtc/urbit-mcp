@@ -95,7 +95,7 @@
       ::  XX better error
       ?+  content-type
         ~&  >  %content-type-error
-        [(send [405 ~ [%stock ~]]) this]
+        [(send [415 ~ [%stock ~]]) this]
       ::
           [~ %'application/json']
         =/  parsed=(unit json)
@@ -103,7 +103,7 @@
         ?~  parsed
           ::  XX better error
           ~&  >  %failed-to-parse
-          [(send [405 ~ [%stock ~]]) this]
+          [(send [400 ~ [%stock ~]]) this]
         %.  u.parsed
         |=  jon=json
         =/  id=(unit json)      (~(get jo:ju jon) /id)
