@@ -154,11 +154,6 @@
       ==
   ==
 ::
-++  mcp-tools-list
-  |=  [tool-set=(set tool:mcp) id=(unit json)]
-  ^-  json
-  (rpc-result (mcp-tools-to-json tool-set) id)
-::
 ++  mcp-resources-to-json
   |=  resource-set=(set resource:mcp)
   ^-  json
@@ -179,11 +174,6 @@
       :~  ['mimeType' s+u.mime-type.resource]
       ==
   ==
-::
-++  mcp-resources-list
-  |=  [resource-set=(set resource:mcp) id=(unit json)]
-  ^-  json
-  (rpc-result (mcp-resources-to-json resource-set) id)
 ::
 ++  mcp-prompts-to-json
   |=  prompt-set=(set prompt:mcp)
@@ -217,10 +207,6 @@
       ==
   ==
 ::
-++  mcp-prompts-list
-  |=  [prompt-set=(set prompt:mcp) id=(unit json)]
-  ^-  json
-  (rpc-result (mcp-prompts-to-json prompt-set) id)
 ::
 ::++  mcp-tools-list
 ::  |=  id=(unit json)

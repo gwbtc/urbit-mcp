@@ -137,7 +137,7 @@
           :-  %json
           ::  XX put fake/dev ship @p in the server title
           ::  XX use an actual version number
-          (mcp-tools-list:ml tools id)
+          (rpc-result:ml (mcp-tools-to-json:ml tools) id)
         ::
             [~ [%s %'resources/list']]
           :_  this
@@ -145,7 +145,7 @@
               200
             ~
           :-  %json
-          (mcp-resources-list:ml resources id)
+          (rpc-result:ml (mcp-resources-to-json:ml resources) id)
         ::
             [~ [%s %'prompts/list']]
           :_  this
@@ -153,7 +153,7 @@
               200
             ~
           :-  %json
-          (mcp-prompts-list:ml prompts id)
+          (rpc-result:ml (mcp-prompts-to-json:ml prompts) id)
         ::
             [~ [%s %'resources/read']]
           =/  uri=(unit json)  (~(get jo:ju jon) /params/uri)
