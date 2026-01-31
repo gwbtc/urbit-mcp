@@ -227,10 +227,10 @@
     [%x %tools ~]
       ``json+!>((mcp-tools-to-json:ml tools))
     ::
-    ::  .^(noun %gx /=mcp-server=/resources/noun)
-    ::  read resource endpoints
+    ::  .^(json %gx /=mcp-server=/resources/json)
+    ::  read resource definitions
     [%x %resources ~]
-      ``noun+!>(resources)
+      ``json+!>((mcp-resources-to-json:ml resources))
     ::
     ::  .^(noun %gx /=mcp-server=/prompts/noun)
     ::  read prompts
