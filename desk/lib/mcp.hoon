@@ -24,14 +24,18 @@
             'get the Urbit ID / @p of this ship'
             ~
             ~
-            ::  thread-builder:*tool:mcp
             |=  *
-            =/  m  (strand:spider ,json)
+            =/  m  (strand:spider ,vase)
             ^-  form:m
             ;<    =bowl:rand
                 bind:m
               get-bowl:strandio
-            (pure:m [%s (crip "{<our.bowl>}")])
+            %-  pure:m
+            !>  ^-  json
+            %-  pairs:enjs:format
+            :~  ['type' s+'text']
+                ['text' s+(crip "{<our.bowl>}")]
+            ==
         ==
     ==
 ::    :~  :*  'set Behn timer'

@@ -25,7 +25,7 @@
       =desc
       parameters=(map name parameter-def)
       required=(list @t)
-      thread-builder=$-((map @t json) _*form:(strand:spider ,json))
+      thread-builder=$-((map @t json) _*form:(strand:spider ,vase))
   ==
 ::
 +$  resource

@@ -112,7 +112,7 @@
           [(rpc-method-not-found eyre-id) this]
         ::
             [~ [%s %'notifications/initialized']]
-          [(send [200 ~ [%stock ~]]) this]
+          [(send [200 ~ [%none ~]]) this]
         ::
             [~ [%s %'initialize']]
           ::  XX check protocol version?
@@ -156,6 +156,8 @@
           (mcp-tools-list:ml id)
         ::
             [~ [%s %'tools/call']]
+          ?<  ?=(~ id)
+          ?>  ?=([%n @ta] u.id)
           :_  this
           =/  tool-name=(unit json)
             (~(get jo:ju jon) /params/name)
@@ -183,27 +185,12 @@
           ?.  ?=([%o *] u.arguments)
             (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id))
           ^-  (list card)
-          ::  XX not sure about /[id] cause it's a unit
-          ::     should we just have crashed by now if id was ~
-          ::  XX  append id to this wire
-          :~  :*  %pass  /(scot %ta eyre-id)
+          :~  :*  %pass  /thread-result/[eyre-id]/[p.u.id]
                   %arvo  %k
-                  ::  make map of u.arguments
-                  ::  %lard  (thread-builder.i.tool-results u.arguments)
                   %lard  q.byk.bowl
-                  ::  (thread-builder:*tool:mcp *(map @t json))
-                  *shed:khan
+                  (thread-builder.i.tool-results p.u.arguments)
               ==
           ==
-::          :~  :*  %pass  /[eyre-id]/[id]
-::                  %arvo  %k
-::                  :*  %fard
-::                      q.byk.bowl
-::                      (@tas p.u.tool-name)
-::                      *cage
-::                  ==
-::              ==
-::          ==
         ==
       ==
     ==
@@ -211,15 +198,46 @@
 ++  on-arvo
   |=  [=(pole knot) =sign-arvo]
   ^-  (quip card _this)
-  ?+    pole
-      ~_  leaf/"mcp-server: unrecognized wire {<`path`pole>}"
-      !!
+  ?+  pole
+    ~_  leaf/"mcp-server: unrecognized wire {<`path`pole>}"
+    !!
+  ::
       [%eyre %connect ~]
     ?>  ?=([%eyre %bound *] sign-arvo)
     ?:  accepted.sign-arvo
       `this
     %-  (slog leaf/"mcp-server: failed to bind {<dap.bowl>} to /apps/mcp-server/api" ~)
     `this
+  ::
+      [%thread-result eyre-id=@ta id=@ud ~]
+    ?+  sign-arvo
+      (on-arvo:def pole sign-arvo)
+    ::
+        [%khan %arow *]
+      =+  send=(cury response:schooner eyre-id.pole)
+      ?.  -.p.sign-arvo
+        :_  this
+        %^    send
+            500
+          ~
+        :-  %json
+        (rpc-error:ml rpc-internal-error:ml (crip "{<p.p.sign-arvo>}") `[%n id.pole])
+      ?>  ?=([%khan %arow %.y %noun *] sign-arvo)
+      =/  [%khan %arow %.y %noun =vase]  sign-arvo
+      =/  tool-result=json  !<(json vase)
+      =/  text-content=(unit @t)
+        ?.  ?=([%s *] tool-result)
+          ~
+        `p.tool-result
+      ?~  text-content
+        :_  this
+        %^    send
+            500
+          ~
+        :-  %json
+        (rpc-error:ml rpc-internal-error:ml 'Invalid tool response format' `[%n id.pole])
+      [(send [200 ~ [%json (mcp-text-result:ml u.text-content `[%n id.pole])]]) this]
+    ==
   ==
 ++  on-watch
   |=  =(pole knot)
