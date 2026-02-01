@@ -102,6 +102,81 @@
               ==
             ==
         ==
+        :*  'Add MCP tool'
+            'Add a new MCP tool to the %mcp-server agent.'
+            %-  my
+            :~  ['name' [%string 'The name of your MCP tool.']]
+                ['desc' [%string 'The description of your MCP tool.']]
+                ['parameters' [%object 'The parameters your MCP tool will take.']]
+                ['required' [%array 'The non-optional parameters your MCP tool needs.']]
+                ::  XX explain helper cores for reusable functions
+                ::  XX explain what's available in the subject
+                ['thread-builder' [%string 'A Hoon gate $-((map @t json) ,vase).']]
+            ==
+            ~['name' 'desc' 'parameters' 'required' 'thread-builder']
+            ^-  thread-builder:mcp
+            |=  args=(map @t json)
+            ^-  shed:khan
+            =/  m  (strand:spider ,vase)
+            ^-  form:m
+            =/  name=json            (~(got by args) 'name')
+            =/  desc=json            (~(got by args) 'desc')
+            =/  parameters=json      (~(got by args) 'parameters')
+            =/  required=json        (~(got by args) 'required')
+            =/  thread-builder=json  (~(got by args) 'thread-builder')
+            ?>  ?=([%s @t] name)
+            ?>  ?=([%s @t] desc)
+            ?>  ?=([%o *] parameters)
+            ?>  ?=([%a *] required)
+            ?>  ?=([%s @t] thread-builder)
+            =/  nam=@t  p.name
+            =/  des=@t  p.desc
+            =/  req=(list @t)
+              %+  turn
+                p.required
+              |=  =json
+              ?>  ?=([%s @t] json)
+              ^-  @t
+              p.json
+            =/  ted=thread-builder:mcp
+              !<  thread-builder:mcp
+              %+  slap
+                ::  XX  explicitly compose a subject with io, spider, etc?
+                ::        would be good for security to declare everything in
+                ::        the subject that new MCP tools have access to
+                ::        although threads could import their own stuff
+                ::        ...could analyse compiled threads here sometime?
+                !>(.)
+              (ream p.thread-builder)
+            =/  par=(map name:mcp parameter-def:mcp)
+              %-  ~(gas by *(map name:mcp parameter-def:mcp))
+              %+  turn
+                ~(tap by p.parameters)
+              |=  [name=@t =json]
+              ^-  [name:mcp parameter-def:mcp]
+              ?>  ?=([%o *] json)
+              :-  name
+              %-  head
+              %+  turn
+                ~(tap by p.json)
+              |=  [type=@t def=^json]
+              ?>  ?=([%s @t] def)
+              [(parameter-type:mcp type) p.def]
+          ;<  =bowl:rand  bind:m  get-bowl:io
+          ;<  ~  bind:m
+            %-  send-raw-card:io
+            :*  %pass   /add-tool
+                %agent  [our.bowl %mcp-server]
+                %poke  %add-mcp-tool  !>([nam des par req ted])
+            ==
+          ;<  ~  bind:m  (take-poke-ack:io /add-tool)
+          %-  pure:m
+          !>  ^-  json
+          %-  pairs:enjs:format
+          :~  ['type' s+'text']
+              ['text' s+'Tool added!']
+          ==
+        ==
     ==
 ::    :~  :*  'set Behn timer'
 ::            'set a Behn timer for testing purposes'

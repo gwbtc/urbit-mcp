@@ -70,9 +70,21 @@
   ::     their own moon IDs; Gall agents can discriminate
   ::     between our.bowl or ships in our clan
   ::  ?>  =(src.bowl our.bowl)
-  |^  ?+    mark  (on-poke:def mark vase)
+  |^  ?+  mark
+        (on-poke:def mark vase)
+      ::
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
+      ::
+          %add-mcp-tool
+        ?>  =(src our):bowl
+        =/  =tool:mcp  !<(tool:mcp vase)
+        ::  XX send listChanged notification
+        ::  XX add resource to scry the contents of this tool?
+        :-  ~
+        %=  this
+          tools  (~(put in tools) tool)
+        ==
       ==
   ++  handle-req
     |=  [eyre-id=@ta req=inbound-request:eyre]

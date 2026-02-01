@@ -19,13 +19,17 @@
       =desc
   ==
 ::
++$  thread-builder
+  $+  mcp-thread-builder
+  $-((map @t json) _*form:(strand:spider ,vase))
+::
 +$  tool
   $+  mcp-tool
   $:  =name
       =desc
       parameters=(map name parameter-def)
       required=(list @t)
-      thread-builder=$-((map @t json) _*form:(strand:spider ,vase))
+      =thread-builder
   ==
 ::
 +$  resource
