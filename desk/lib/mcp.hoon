@@ -24,6 +24,7 @@
             'get the Urbit ID / @p of this ship'
             ~
             ~
+            ^-  thread-builder:mcp
             |=  *
             =/  m  (strand:spider ,vase)
             ^-  form:m
@@ -41,6 +42,7 @@
             'Commit code changes to a desk. If this errors with a timeout, there are no changes to commit.'
             (my ['desk' [%string (crip "desk name (e.g. 'base' to commit the %base desk)")]]~)
             ['desk']~
+            ^-  thread-builder:mcp
             =>
             |%
             ++  print-tang-to-wain
