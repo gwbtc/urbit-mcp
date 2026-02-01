@@ -66,10 +66,6 @@
 ++  on-poke
   |=  [=mark =vase]
   ^-  (quip card _this)
-  ::  XX would be nice to use clan so LLMs could use
-  ::     their own moon IDs; Gall agents can discriminate
-  ::     between our.bowl or ships in our clan
-  ::  ?>  =(src.bowl our.bowl)
   |^  ?+  mark
         (on-poke:def mark vase)
       ::
@@ -89,6 +85,15 @@
   ++  handle-req
     |=  [eyre-id=@ta req=inbound-request:eyre]
     ^-  (quip card _this)
+    ::  Check authentication first
+    ?.  authenticated.req
+      =+  send=(cury response:schooner eyre-id)
+      :_  this
+      %^    send
+          401
+        ~
+      :-  %json
+      (rpc-error:ml rpc-internal-error:ml 'Authentication required' ~)
     =/  lin=request-line:server
       (parse-request-line:server url.request.req)
     ::  =/  site=(list @t)  site.lin
