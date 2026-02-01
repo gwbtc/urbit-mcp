@@ -2,6 +2,18 @@
 /+  dbug, verb, server, schooner, default-agent,
     ju=json-utils, ml=mcp
 |%
+++  print-tang-to-wain
+  |=  =tang
+  ^-  wain
+  %-  zing
+  %+  turn
+    tang
+  |=  =tank
+  %+  turn
+    (wash [0 80] tank)
+  |=  =tape
+  (crip tape)
+::
 +$  card  card:agent:gall
 +$  versioned-state
   $:  state-0
@@ -318,20 +330,32 @@
     ::
         [%khan %arow *]
       =+  send=(cury response:schooner eyre-id.pole)
-      ?.  -.p.sign-arvo
+      ?:  ?=(%.n -.p.sign-arvo)
         :_  this
         %^    send
             500
           ~
         :-  %json
-        (rpc-error:ml rpc-internal-error:ml (crip "{<p.p.sign-arvo>}") `[%n id.pole])
+        (rpc-error:ml rpc-internal-error:ml (crip (print-tang-to-wain tang.p.p.sign-arvo)) `[%n id.pole])
       ?>  ?=([%khan %arow %.y %noun *] sign-arvo)
       =/  [%khan %arow %.y %noun =vase]  sign-arvo
       =/  tool-result=json  !<(json vase)
       =/  text-content=(unit @t)
-        ?.  ?=([%s *] tool-result)
+        ?+  tool-result
           ~
-        `p.tool-result
+        ::
+            [%s *]
+          `p.tool-result
+        ::
+            [%o *]
+          =/  type-field=(unit json)  (~(get by p.tool-result) 'type')
+          =/  text-field=(unit json)  (~(get by p.tool-result) 'text')
+          ?~  type-field  ~
+          ?~  text-field  ~
+          ?.  ?=([%s %'text'] u.type-field)  ~
+          ?.  ?=([%s *] u.text-field)  ~
+          `p.u.text-field
+        ==
       ?~  text-content
         :_  this
         %^    send
