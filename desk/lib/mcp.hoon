@@ -291,6 +291,11 @@
             'LLM-readable sitemap of https://docs.urbit.org content'
             `'text/markdown'
         ==
+        :*  'https://docs.urbit.org/urbit-os/base/threads/strandio.md'
+            'Strandio Documentation'
+            'Urbit Docs /lib/strandio.hoon reference; useful for writing threads'
+            'text/markdown'
+        ==
     ==
   ++  prompts
     ^-  (list prompt:mcp)
