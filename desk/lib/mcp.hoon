@@ -143,16 +143,16 @@
             ?~  required  ~|(%missing-required !!)
             ?~  thread-builder  ~|(%missing-thread-builder !!)
             =/  req=(list @t)  u.required
-            =/  ted=thread-builder:mcp
-              !<  thread-builder:mcp
-              %+  slap
-                ::  XX  explicitly compose a subject with io, spider, etc?
-                ::        would be good for security to declare everything in
-                ::        the subject that new MCP tools have access to
-                ::        although threads could import their own stuff
-                ::        ...could analyse compiled threads here sometime?
-                !>(.)
-              (ream u.thread-builder)
+            ;<  =beak  bind:m  get-beak:io
+            =/  bez=(list beam)
+              :~  [beak /sur/mcp/hoon]
+                  [beak /sur/spider/hoon]
+                  [beak /lib/strandio/hoon]
+                  [beak /lib/json-utils/hoon]
+              ==
+            ;<    vax=vase
+                bind:m
+              (eval-hoon:io (ream u.thread-builder) bez)
             =/  par=(map name:mcp parameter-def:mcp)
               %-  ~(gas by *(map name:mcp parameter-def:mcp))
               %+  turn
@@ -171,20 +171,21 @@
               ?~  desc-text
                 ~|(%missing-parameter-description !!)
               [(parameter-type:mcp u.type-text) u.desc-text]
-          ;<  =bowl:rand  bind:m  get-bowl:io
-          ;<  ~  bind:m
-            %-  send-raw-card:io
-            :*  %pass   /add-tool
-                %agent  [our.bowl %mcp-server]
-                %poke  %add-mcp-tool  !>([u.nam u.des par req ted])
+            ;<  our=ship  bind:m  get-our:io
+            ;<  ~  bind:m
+              %-  send-raw-card:io
+              :*  %pass   /add-tool
+                  %agent  [our %mcp-server]
+                  %poke  %add-mcp-tool
+                  !>([u.nam u.des par req !<(thread-builder:mcp vax)])
+              ==
+            ;<  ~  bind:m  (take-poke-ack:io /add-tool)
+            %-  pure:m
+            !>  ^-  json
+            %-  pairs:enjs:format
+            :~  ['type' s+'text']
+                ['text' s+'Tool added!']
             ==
-          ;<  ~  bind:m  (take-poke-ack:io /add-tool)
-          %-  pure:m
-          !>  ^-  json
-          %-  pairs:enjs:format
-          :~  ['type' s+'text']
-              ['text' s+'Tool added!']
-          ==
         ==
         :*  'khan-eval'
             'Evaluate a string of Hoon code to check if it is a valid $shed:khan. Useful for testing the body of a thread-builder gate for an MCP tool.'
