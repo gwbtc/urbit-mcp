@@ -185,27 +185,26 @@
           (rpc-result:ml (mcp-prompts-to-json:ml prompts) id)
         ::
             [~ [%s %'resources/read']]
-          =/  uri=(unit json)  (~(get jo:ju jon) /params/uri)
+          =/  uri=(unit @t)
+            (fall (mole |.((~(deg jo:ju jon) /params/uri so:dejs:format))) ~)
           ?~  uri
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing resource URI' id))
-          ?.  ?=([%s *] u.uri)
-            :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid resource URI' id))
-          =/  uri-string=@t  p.u.uri
-          =/  uri-tape=tape  (trip uri-string)
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid resource URI' id))
+          =/  uri-tape=tape  (trip u.uri)
           ::  fetch http / https resources with iris
           ?:  ?|  =("http://" (scag 7 uri-tape))
                   =("https://" (scag 8 uri-tape))
               ==
-            ?~  id
+            =/  request-id=(unit @ud)  (bind id ni:dejs:format)
+            ?~  request-id
               :_  this
-              (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing JSON RPC request ID' ~))
-            ?>  ?=([%n *] u.id)
+              (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
             :_  this
-            :~  :*  %pass  /resource/[eyre-id]/[p.u.id]/(scot %t p.u.uri)
-                    %arvo  %i
-                    [%request [%'GET' uri-string ~ ~] *outbound-config:iris]
+            :~  :*  %pass
+                    /resource/[eyre-id]/[(scot %ud u.request-id)]/(scot %t u.uri)
+                    %arvo
+                    %i
+                    [%request [%'GET' u.uri ~ ~] *outbound-config:iris]
                 ==
             ==
           ::  XX just error on all other resources for now
@@ -217,32 +216,30 @@
           :-  %json
           %:  rpc-error:ml
               rpc-method-not-found:ml
-              (crip "Resource {<uri-string>} not found")
+              (crip "Resource {<u.uri>} not found")
               id
           ==
         ::
             [~ [%s %'prompts/get']]
-          =/  prompt-name=(unit json)  (~(get jo:ju jon) /params/name)
+          =/  prompt-name=(unit @t)
+            (fall (mole |.((~(deg jo:ju jon) /params/name so:dejs:format))) ~)
           ?~  prompt-name
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing prompt name' id))
-          ?.  ?=([%s *] u.prompt-name)
-            :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid prompt name' id))
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid prompt name' id))
           =/  prompt-results
             %+  murn
               ~(tap in prompts)
             |=  =prompt:mcp
             ^-  (unit prompt:mcp)
-            ?.  =(name.prompt p.u.prompt-name)
+            ?.  =(name.prompt u.prompt-name)
               ~
             `prompt
           ?~  prompt-results
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-method-not-found:ml (crip "Prompt {<p.u.prompt-name>} not found") id))
+            (send 200 ~ %json (rpc-error:ml rpc-method-not-found:ml (crip "Prompt {<u.prompt-name>} not found") id))
           ?:  (gth 1 (lent prompt-results))
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<p.u.prompt-name>} prompts found") id))
+            (send 200 ~ %json (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.prompt-name>} prompts found") id))
           =/  =prompt:mcp  i.prompt-results
           :_  this
           %^    send
@@ -273,39 +270,42 @@
           id
         ::
             [~ [%s %'tools/call']]
-          ?<  ?=(~ id)
-          ?>  ?=([%n @ta] u.id)
+          =/  rpc-id=(unit @ud)  (bind id ni:dejs:format)
+          ?~  rpc-id
+            :_  this
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing JSON RPC request ID' id))
           :_  this
-          =/  tool-name=(unit json)
-            (~(get jo:ju jon) /params/name)
+          =/  tool-name=(unit @t)  
+            (fall (mole |.((~(deg jo:ju jon) /params/name so:dejs:format))) ~)
           ?~  tool-name
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing tool name' id))
-          ?.  ?=([%s *] u.tool-name)
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid tool name' id))
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid tool name' id))
           =/  tool-results
             %+  murn
               ~(tap in tools)
             ::  XX placeholder name
             |=  foo=tool:mcp
             ^-  (unit tool:mcp)
-            ?.  =(name.foo p.u.tool-name)
+            ?.  =(name.foo u.tool-name)
               ~
             `foo
           ?~  tool-results
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<tool-name>} not found") id))
+            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<u.tool-name>} not found") id))
           ?:  (gth 1 (lent tool-results))
-            (send 200 ~ %json (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<tool-name>} tools found") id))
-          =/  arguments=(unit json)
-            (~(get jo:ju jon) /params/arguments)
+            (send 200 ~ %json (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.tool-name>} tools found") id))
+          =/  arguments=(unit json)  (~(get jo:ju jon) /params/arguments)
           ?~  arguments
             (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing arguments' id))
-          ?.  ?=([%o *] u.arguments)
+          =/  args-map=(unit (map @t json))
+            ?:  ?=([%o *] u.arguments)
+              `p.u.arguments
+            ~
+          ?~  args-map
             (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id))
           ^-  (list card)
-          :~  :*  %pass  /thread-result/[eyre-id]/[p.u.id]
+          :~  :*  %pass  /thread-result/[eyre-id]/(scot %ud u.rpc-id)
                   %arvo  %k
                   %lard  q.byk.bowl
-                  (thread-builder.i.tool-results p.u.arguments)
+                  (thread-builder.i.tool-results u.args-map)
               ==
           ==
         ==
@@ -370,13 +370,17 @@
           `p.tool-result
         ::
             [%o *]
-          =/  type-field=(unit json)  (~(get by p.tool-result) 'type')
-          =/  text-field=(unit json)  (~(get by p.tool-result) 'text')
-          ?~  type-field  ~
-          ?~  text-field  ~
-          ?.  ?=([%s %'text'] u.type-field)  ~
-          ?.  ?=([%s *] u.text-field)  ~
-          `p.u.text-field
+          =/  type-text=(unit @t)
+            (fall (mole |.((~(deg jo:ju tool-result) /type so:dejs:format))) ~)
+          =/  content-text=(unit @t)
+            (fall (mole |.((~(deg jo:ju tool-result) /text so:dejs:format))) ~)
+          ?~  type-text
+            ~
+          ?~  content-text
+            ~
+          ?.  =(u.type-text 'text')
+            ~
+          content-text
         ==
       ?~  text-content
         :_  this

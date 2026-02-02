@@ -61,9 +61,11 @@
             ^-  shed:khan
             =/  m  (strand:spider ,vase)
             ^-  form:m
-            =/  desk-name  (~(got by args) 'desk')
-            ?>  ?=([%s @t] desk-name)
-            =/  desk=@tas  (@tas p.desk-name)
+            =/  args-json=json  [%o args]
+            =/  desk-name=(unit @t)
+              (fall (mole |.((~(deg jo:json-utils args-json) /desk so:dejs:format))) ~)
+            ?~  desk-name  ~|(%missing-desk !!)
+            =/  desk=@tas  (@tas u.desk-name)
             ;<  ~  bind:m
               (send-raw-card:io [%pass /dill-logs %arvo %d %logs `~])
             ;<  ~  bind:m
@@ -121,25 +123,25 @@
             ^-  shed:khan
             =/  m  (strand:spider ,vase)
             ^-  form:m
-            =/  name=json            (~(got by args) 'name')
-            =/  desc=json            (~(got by args) 'desc')
-            =/  parameters=json      (~(got by args) 'parameters')
-            =/  required=json        (~(got by args) 'required')
-            =/  thread-builder=json  (~(got by args) 'thread-builder')
-            ?>  ?=([%s @t] name)
-            ?>  ?=([%s @t] desc)
-            ?>  ?=([%o *] parameters)
-            ?>  ?=([%a *] required)
-            ?>  ?=([%s @t] thread-builder)
-            =/  nam=@t  p.name
-            =/  des=@t  p.desc
-            =/  req=(list @t)
-              %+  turn
-                p.required
-              |=  =json
-              ?>  ?=([%s @t] json)
-              ^-  @t
-              p.json
+            =/  args-json=json  [%o args]
+            =/  nam=(unit @t)
+              (fall (mole |.((~(deg jo:json-utils args-json) /name so:dejs:format))) ~)
+            =/  des=(unit @t)
+              (fall (mole |.((~(deg jo:json-utils args-json) /desc so:dejs:format))) ~)
+            =/  parameters=(unit (map @t json))
+              ?~  param-json=(~(get jo:json-utils args-json) /parameters)  ~
+              ?.  ?=([%o *] u.param-json)  ~
+              `p.u.param-json
+            =/  required=(unit (list @t))
+              (fall (mole |.((~(deg jo:json-utils args-json) /required (ar so):dejs:format))) ~)
+            =/  thread-builder=(unit @t)
+              (fall (mole |.((~(deg jo:json-utils args-json) /thread-builder so:dejs:format))) ~)
+            ?~  nam  ~|(%missing-name !!)
+            ?~  des  ~|(%missing-desc !!)
+            ?~  parameters  ~|(%missing-parameters !!)
+            ?~  required  ~|(%missing-required !!)
+            ?~  thread-builder  ~|(%missing-thread-builder !!)
+            =/  req=(list @t)  u.required
             =/  ted=thread-builder:mcp
               !<  thread-builder:mcp
               %+  slap
@@ -149,27 +151,31 @@
                 ::        although threads could import their own stuff
                 ::        ...could analyse compiled threads here sometime?
                 !>(.)
-              (ream p.thread-builder)
+              (ream u.thread-builder)
             =/  par=(map name:mcp parameter-def:mcp)
               %-  ~(gas by *(map name:mcp parameter-def:mcp))
               %+  turn
-                ~(tap by p.parameters)
+                ~(tap by u.parameters)
               |=  [name=@t =json]
               ^-  [name:mcp parameter-def:mcp]
-              ?>  ?=([%o *] json)
+              ?.  ?=([%o *] json)
+                ~|(%invalid-parameter-definition !!)
               :-  name
-              %-  head
-              %+  turn
-                ~(tap by p.json)
-              |=  [type=@t def=^json]
-              ?>  ?=([%s @t] def)
-              [(parameter-type:mcp type) p.def]
+              =/  type-text=(unit @t)
+                (fall (mole |.((~(deg jo:json-utils json) /type so:dejs:format))) ~)
+              =/  desc-text=(unit @t)
+                (fall (mole |.((~(deg jo:json-utils json) /description so:dejs:format))) ~)
+              ?~  type-text
+                ~|(%missing-parameter-type !!)
+              ?~  desc-text
+                ~|(%missing-parameter-description !!)
+              [(parameter-type:mcp u.type-text) u.desc-text]
           ;<  =bowl:rand  bind:m  get-bowl:io
           ;<  ~  bind:m
             %-  send-raw-card:io
             :*  %pass   /add-tool
                 %agent  [our.bowl %mcp-server]
-                %poke  %add-mcp-tool  !>([nam des par req ted])
+                %poke  %add-mcp-tool  !>([u.nam u.des par req ted])
             ==
           ;<  ~  bind:m  (take-poke-ack:io /add-tool)
           %-  pure:m
