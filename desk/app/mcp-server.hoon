@@ -192,28 +192,33 @@
           ?.  ?=([%s *] u.uri)
             :_  this
             (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid resource URI' id))
-          ?+  uri
+          =/  uri-string=@t  p.u.uri
+          =/  uri-tape=tape  (trip uri-string)
+          ::  fetch http / https resources with iris
+          ?:  ?|  =("http://" (scag 7 uri-tape))
+                  =("https://" (scag 8 uri-tape))
+              ==
+            ?~  id
+              :_  this
+              (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing JSON RPC request ID' ~))
+            ?>  ?=([%n *] u.id)
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-method-not-found:ml (crip "Resource {<p.u.uri>} not found") id))
-          ::
-              [~ [%s %'/tools']]
-            :_  this
-            %^    send
-                200
-              ~
-            :-  %json
-            %-  rpc-result:ml
-            :-  %-  pairs:enjs:format
-                :~  :-  'contents'
-                    :-  %a
-                    :~  %-  pairs:enjs:format
-                        :~  ['uri' s+'/tools']
-                            ['mimeType' s+'application/json']
-                            ['text' (mcp-tools-to-json:ml tools)]
-                        ==
-                    ==
+            :~  :*  %pass  /resource/[eyre-id]/[p.u.id]/(scot %t p.u.uri)
+                    %arvo  %i
+                    [%request [%'GET' uri-string ~ ~] *outbound-config:iris]
                 ==
-            id
+            ==
+          ::  XX just error on all other resources for now
+          ::     different URI schemes require different handlers
+          :_  this
+          %^    send
+              200
+            ~
+          :-  %json
+          %:  rpc-error:ml
+              rpc-method-not-found:ml
+              (crip "Resource {<uri-string>} not found")
+              id
           ==
         ::
             [~ [%s %'prompts/get']]
@@ -381,6 +386,56 @@
         :-  %json
         (rpc-error:ml rpc-internal-error:ml 'Invalid tool response format' `[%n id.pole])
       [(send [200 ~ [%json (mcp-text-result:ml u.text-content `[%n id.pole])]]) this]
+    ==
+  ::
+      [%resource eyre-id=@ta id=@ud uri=@ta ~]
+    ?+  sign-arvo
+      (on-arvo:def pole sign-arvo)
+    ::
+        [%iris %http-response *]
+      =+  send=(cury response:schooner eyre-id.pole)
+      =/  =client-response:iris  client-response.sign-arvo
+      ?+  -.client-response
+        :_  this
+        %^    send
+            500
+          ~
+        :-  %json
+        (rpc-error:ml rpc-internal-error:ml 'Unexpected Iris response type' `[%n id.pole])
+      ::
+          %finished
+        ?~  full-file.client-response
+          :_  this
+          %^    send
+              500
+            ~
+          :-  %json
+          (rpc-error:ml rpc-internal-error:ml 'Empty HTTP response body' `[%n id.pole])
+        =/  =response-header:http  response-header.client-response
+        =/  content-type=@t
+          ?~  content-type-header=(get-header:http 'content-type' headers.response-header)
+            'text/plain'
+          u.content-type-header
+        =/  body-text=@t
+          (rap 3 ~[q.data.u.full-file.client-response])
+        :_  this
+        %^    send
+            200
+          ~
+        :-  %json
+        %-  rpc-result:ml
+        :-  %-  pairs:enjs:format
+            :~  :-  'contents'
+                :-  %a
+                :~  %-  pairs:enjs:format
+                    :~  ['uri' s+(@t (slav %t uri.pole))]
+                        ['mimeType' s+content-type]
+                        ['text' s+body-text]
+                    ==
+                ==
+            ==
+        `[%n id.pole]
+      ==
     ==
   ==
 ++  on-watch

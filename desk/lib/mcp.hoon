@@ -196,10 +196,10 @@
 ::    ==
   ++  resources
     ^-  (list resource:mcp)
-    :~  :*  '/tools'
-            'Available Tools'
-            'List of available tools in JSON format'
-            `'application/json'
+    :~  :*  'https://docs.urbit.org/llms.txt'
+            'Urbit Docs llms.txt'
+            'LLM-readable sitemap of https://docs.urbit.org content'
+            `'text/markdown'
         ==
     ==
   ++  prompts
