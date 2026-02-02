@@ -197,7 +197,7 @@
                 If successful, this tool will return your Hoon string.
                 If unsuccessful, this tool will return an error message and a stack trace.
                 The error message will pertain to your code.
-                The strack trace will point to the tool definition itself, not your code.
+                The stack trace will point to the tool definition itself, not your code.
                 '''
             ==
             ['hoon']~
