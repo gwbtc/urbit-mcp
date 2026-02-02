@@ -147,6 +147,7 @@
             =/  bez=(list beam)
               :~  [beak /sur/mcp/hoon]
                   [beak /sur/spider/hoon]
+                  [beak /lib/strand/hoon]
                   [beak /lib/strandio/hoon]
                   [beak /lib/json-utils/hoon]
               ==
@@ -215,6 +216,7 @@
             ;<  =beak  bind:m  get-beak:io
             =/  bez=(list beam)
               :~  [beak /sur/mcp/hoon]
+                  [beak /lib/strand/hoon]
                   [beak /sur/spider/hoon]
                   [beak /lib/strandio/hoon]
                   [beak /lib/json-utils/hoon]
