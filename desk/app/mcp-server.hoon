@@ -130,6 +130,26 @@
     ?+  method.request.req
       [(send [405 ~ [%stock ~]]) this]
     ::
+        %'GET'
+      =/  sse-headers=(list [key=@t value=@t])
+        :~  ['content-type' 'text/event-stream']
+            ['cache-control' 'no-cache']
+            ['connection' 'keep-alive']
+            ['access-control-allow-origin' '*']
+        ==
+      =/  connection-json=json
+        (pairs:enjs:format ~[['type' s+'connection']])
+      =/  event-data=@t
+        %-  crip
+        %-  zing
+        :~  "data: "
+            (trip (en:json:html connection-json))
+            (trip '\0a')
+            (trip '\0a')
+        ==
+      :_  this
+      %^  send  200  sse-headers  [%text-plain event-data]
+    ::
         %'POST'
       =/  content-type=(unit @t)
         (get-header:http 'content-type' header-list.request.req)
