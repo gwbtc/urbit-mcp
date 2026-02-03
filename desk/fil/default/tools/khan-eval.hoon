@@ -10,6 +10,21 @@
       '''
       String of Hoon code that should be a $shed:khan.
       The simplest valid string is '=/  m  (strand ,vase)  (pure:m !>(%success))'.
+
+      Your thread will be built against a subject with some dependencies:
+        - /sur/mcp/hoon        - %mcp-server types
+        - /sur/spider/hoon     - thread types
+        - /lib/strand/hoon     - thread utilities library
+        - /lib/strandio/hoon   - threads library
+        - /lib/json-utils/hoon - json object parsing library
+
+      You can access arms and types in those files as follows:
+        - foo:mcp
+        - foo:spider
+        - foo:strand
+        - foo:strandio
+        - foo:json-utils
+
       If successful, this tool will return your Hoon string.
       If unsuccessful, this tool will return an error message and a stack trace.
       The error message will pertain to your code.
