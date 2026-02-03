@@ -52,15 +52,44 @@
 ::
 ++  on-init
   ^-  (quip card _this)
+  =/  defaults
+    .^((list path) %ct /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default)
   :-  :~  :*  %pass  /eyre/connect
               %arvo  %e  %connect
               [`/apps/mcp-server/api dap.bowl]
           ==
       ==
   %=  this
-    tools      (sy tools:defaults:ml)
-    resources  (sy resources:defaults:ml)
-    prompts    (sy prompts:defaults:ml)
+    tools      %-  sy
+               %+  murn
+                 defaults
+               |=  =path
+               ^-  (unit tool:mcp)
+               ?.  ?=([%fil %default %tools *] path)
+                 ~
+               %-  some
+               !<  tool:mcp
+               .^(vase %ca (welp /(scot %p our.bowl)/mcp-server/(scot %da now.bowl) path))
+    resources  %-  sy
+               %+  murn
+                 defaults
+               |=  =path
+               ^-  (unit resource:mcp)
+               ?.  ?=([%fil %default %resources *] path)
+                 ~
+               %-  some
+               !<  resource:mcp
+               .^(vase %ca (welp /(scot %p our.bowl)/mcp-server/(scot %da now.bowl) path))
+    prompts    %-  sy
+               %+  murn
+                 defaults
+               |=  =path
+               ^-  (unit prompt:mcp)
+               ?.  ?=([%fil %default %prompts *] path)
+                 ~
+               %-  some
+               !<  prompt:mcp
+               .^(vase %ca (welp /(scot %p our.bowl)/mcp-server/(scot %da now.bowl) path))
   ==
 ::
 ++  on-poke

@@ -1,0 +1,85 @@
+/-  mcp, spider
+/+  io=strandio, ju=json-utils
+=,  strand-fail=strand-fail:strand:spider
+^-  tool:mcp
+:*  'add-mcp-tool'
+    'Add a new MCP tool to the %mcp-server agent state.'
+    %-  my
+    :~  ['name' [%string 'The name of your MCP tool.']]
+        ['desc' [%string 'The description of your MCP tool.']]
+        ['parameters' [%object 'The parameters your MCP tool will take.']]
+        ['required' [%array 'The non-optional parameters your MCP tool needs.']]
+        ::  XX explain helper cores for reusable functions
+        ::  XX explain what's available in the subject
+        ['thread-builder' [%string 'A Hoon gate $-((map @t json) ,vase).']]
+    ==
+    ~['name' 'desc' 'parameters' 'required' 'thread-builder']
+    ^-  thread-builder:mcp
+    |=  args=(map @t json)
+    ^-  shed:khan
+    =/  m  (strand:spider ,vase)
+    ^-  form:m
+    =/  args-json=json  [%o args]
+    =/  nam=(unit @t)
+      (fall (mole |.((~(deg jo:ju args-json) /name so:dejs:format))) ~)
+    =/  des=(unit @t)
+      (fall (mole |.((~(deg jo:ju args-json) /desc so:dejs:format))) ~)
+    =/  parameters=(unit (map @t json))
+      ?~  param-json=(~(get jo:ju args-json) /parameters)  ~
+      ?.  ?=([%o *] u.param-json)  ~
+      `p.u.param-json
+    =/  required=(unit (list @t))
+      (fall (mole |.((~(deg jo:ju args-json) /required (ar so):dejs:format))) ~)
+    =/  thread-builder=(unit @t)
+      (fall (mole |.((~(deg jo:ju args-json) /thread-builder so:dejs:format))) ~)
+    ?~  nam  ~|(%missing-name !!)
+    ?~  des  ~|(%missing-desc !!)
+    ?~  parameters  ~|(%missing-parameters !!)
+    ?~  required  ~|(%missing-required !!)
+    ?~  thread-builder  ~|(%missing-thread-builder !!)
+    =/  req=(list @t)  u.required
+    ;<  =beak  bind:m  get-beak:io
+    =/  bez=(list beam)
+      :~  [beak /sur/mcp/hoon]
+          [beak /sur/spider/hoon]
+          [beak /lib/strand/hoon]
+          [beak /lib/strandio/hoon]
+          [beak /lib/json-utils/hoon]
+      ==
+    ;<    vax=vase
+        bind:m
+      (eval-hoon:io (ream u.thread-builder) bez)
+    =/  par=(map name:mcp parameter-def:mcp)
+      %-  ~(gas by *(map name:mcp parameter-def:mcp))
+      %+  turn
+        ~(tap by u.parameters)
+      |=  [name=@t =json]
+      ^-  [name:mcp parameter-def:mcp]
+      ?.  ?=([%o *] json)
+        ~|(%invalid-parameter-definition !!)
+      :-  name
+      =/  type-text=(unit @t)
+        (fall (mole |.((~(deg jo:ju json) /type so:dejs:format))) ~)
+      =/  desc-text=(unit @t)
+        (fall (mole |.((~(deg jo:ju json) /description so:dejs:format))) ~)
+      ?~  type-text
+        ~|(%missing-parameter-type !!)
+      ?~  desc-text
+        ~|(%missing-parameter-description !!)
+      [(parameter-type:mcp u.type-text) u.desc-text]
+    ;<  our=ship  bind:m  get-our:io
+    ;<  ~  bind:m
+      %-  send-raw-card:io
+      :*  %pass   /add-tool
+          %agent  [our %mcp-server]
+          %poke  %add-mcp-tool
+          !>([u.nam u.des par req !<(thread-builder:mcp vax)])
+      ==
+    ;<  ~  bind:m  (take-poke-ack:io /add-tool)
+    %-  pure:m
+    !>  ^-  json
+    %-  pairs:enjs:format
+    :~  ['type' s+'text']
+        ['text' s+'Tool added!']
+    ==
+==
