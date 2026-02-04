@@ -17,14 +17,6 @@
 ++  send-event
   |=  [eyre-id=@ta =json]
   ^-  (list card)
-  =/  event-data=@t
-    %-  crip
-    %-  zing
-    :~  "data: "
-        (trip (en:json:html json))
-        (trip '\0a')
-        (trip '\0a')
-    ==
   %+  give-simple-payload:app:server
     eyre-id
   ^-  simple-payload:http
@@ -32,7 +24,14 @@
       :~  ['content-type' 'text/event-stream']
           ['cache-control' 'no-cache']
       ==
-  `(as-octt:mimes:html (trip event-data))
+    %-  some
+    %-  as-octt:mimes:html
+    ;:  welp
+        "data: "
+        (trip (en:json:html json))
+        "\0a"
+        "\0a"
+    ==
 ::
 +$  card  card:agent:gall
 +$  versioned-state
