@@ -14,6 +14,26 @@
   |=  =tape
   (crip tape)
 ::
+++  send-event
+  |=  [eyre-id=@ta =json]
+  ^-  (list card)
+  =/  event-data=@t
+    %-  crip
+    %-  zing
+    :~  "data: "
+        (trip (en:json:html json))
+        (trip '\0a')
+        (trip '\0a')
+    ==
+  %+  give-simple-payload:app:server
+    eyre-id
+  ^-  simple-payload:http
+  :-  :-  200
+      :~  ['content-type' 'text/event-stream']
+          ['cache-control' 'no-cache']
+      ==
+  `(as-octt:mimes:html (trip event-data))
+::
 +$  card  card:agent:gall
 +$  versioned-state
   $:  state-0
@@ -118,11 +138,7 @@
     ?.  authenticated.req
       =+  send=(cury response:schooner eyre-id)
       :_  this
-      %^    send
-          401
-        ~
-      :-  %json
-      (rpc-error:ml rpc-internal-error:ml 'Authentication required' ~)
+      (send-event eyre-id (rpc-error:ml rpc-internal-error:ml 'Authentication required' ~))
     =/  lin=request-line:server
       (parse-request-line:server url.request.req)
     ::  =/  site=(list @t)  site.lin
@@ -131,24 +147,10 @@
       [(send [405 ~ [%stock ~]]) this]
     ::
         %'GET'
-      =/  sse-headers=(list [key=@t value=@t])
-        :~  ['content-type' 'text/event-stream']
-            ['cache-control' 'no-cache']
-            ['connection' 'keep-alive']
-            ['access-control-allow-origin' '*']
-        ==
       =/  connection-json=json
         (pairs:enjs:format ~[['type' s+'connection']])
-      =/  event-data=@t
-        %-  crip
-        %-  zing
-        :~  "data: "
-            (trip (en:json:html connection-json))
-            (trip '\0a')
-            (trip '\0a')
-        ==
       :_  this
-      %^  send  200  sse-headers  [%text-plain event-data]
+      (send-event eyre-id connection-json)
     ::
         %'POST'
       =/  content-type=(unit @t)
@@ -167,7 +169,7 @@
         =/  method=(unit json)  (~(get jo:ju jon) /method)
         ?+  method
           :_  this
-          (send 405 ~ %json (rpc-error:ml rpc-method-not-found:ml 'Method not found' id))
+          (send-event eyre-id (rpc-error:ml rpc-method-not-found:ml 'Method not found' id))
         ::
             [~ [%s %'notifications/initialized']]
           [(send [200 ~ [%none ~]]) this]
@@ -176,69 +178,53 @@
           ::  XX check protocol version?
           ::     would mean we have to declare compat
           :_  this
-          %-  send
-          :^    200
-              ~
-            %json
-          ::  *json
-          %-  pairs:enjs:format
-          %+  welp
-            ?~(id ~ ['id' u.id]~)
-          :~  ['jsonrpc' s+'2.0']
-              :-  'result'
+          %:  send-event
+              eyre-id
               %-  pairs:enjs:format
-              :~  ['protocolVersion' s+'2024-11-05']
-                  :-  'capabilities'
+              %+  welp
+                ?~(id ~ ['id' u.id]~)
+              :~  ['jsonrpc' s+'2.0']
+                  :-  'result'
                   %-  pairs:enjs:format
-                  :~  :-  'tools'
-                      ::  XX change to %.y once we support listChanged notifs
-                      (pairs:enjs:format ~[['listChanged' b+%.n]])
-                      :-  'resources'
-                      (pairs:enjs:format ~[['subscribe' b+%.n] ['listChanged' b+%.n]])
-                      :-  'prompts'
-                      (pairs:enjs:format ~[['listChanged' b+%.n]])
-                  ==
-                  :-  'serverInfo'
-                  %-  pairs:enjs:format
-                  ::  XX specify real or fake in the server name
-                  :~  ['name' s+(crip "{<our.bowl>} urbit mcp server")]
-                      ['version' s+'1.0.0']
+                  :~  ['protocolVersion' s+'2024-11-05']
+                      :-  'capabilities'
+                      %-  pairs:enjs:format
+                      :~  :-  'tools'
+                          ::  XX change to %.y once we support listChanged notifs
+                          (pairs:enjs:format ~[['listChanged' b+%.n]])
+                          :-  'resources'
+                          (pairs:enjs:format ~[['subscribe' b+%.n] ['listChanged' b+%.n]])
+                          :-  'prompts'
+                          (pairs:enjs:format ~[['listChanged' b+%.n]])
+                      ==
+                      :-  'serverInfo'
+                      %-  pairs:enjs:format
+                      ::  XX specify real or fake in the server name
+                      :~  ['name' s+(crip "{<our.bowl>} urbit mcp server")]
+                          ['version' s+'1.0.0']
+                      ==
                   ==
               ==
           ==
         ::
             [~ [%s %'tools/list']]
           :_  this
-          %^    send
-              200
-            ~
-          :-  %json
-          ::  XX put fake/dev ship @p in the server title
-          ::  XX use an actual version number
-          (rpc-result:ml (mcp-tools-to-json:ml tools) id)
+          (send-event eyre-id (rpc-result:ml (mcp-tools-to-json:ml tools) id))
         ::
             [~ [%s %'resources/list']]
           :_  this
-          %^    send
-              200
-            ~
-          :-  %json
-          (rpc-result:ml (mcp-resources-to-json:ml resources) id)
+          (send-event eyre-id (rpc-result:ml (mcp-resources-to-json:ml resources) id))
         ::
             [~ [%s %'prompts/list']]
           :_  this
-          %^    send
-              200
-            ~
-          :-  %json
-          (rpc-result:ml (mcp-prompts-to-json:ml prompts) id)
+          (send-event eyre-id (rpc-result:ml (mcp-prompts-to-json:ml prompts) id))
         ::
             [~ [%s %'resources/read']]
           =/  uri=(unit @t)
             (fall (mole |.((~(deg jo:ju jon) /params/uri so:dejs:format))) ~)
           ?~  uri
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid resource URI' id))
+            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid resource URI' id))
           =/  uri-tape=tape  (trip u.uri)
           ::  fetch http / https resources with iris
           ?:  ?|  =("http://" (scag 7 uri-tape))
@@ -247,7 +233,7 @@
             =/  request-id=(unit @ud)  (bind id ni:dejs:format)
             ?~  request-id
               :_  this
-              (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
+              (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
             :_  this
             :~  :*  %pass
                     /resource/[eyre-id]/[(scot %ud u.request-id)]/(scot %t u.uri)
@@ -259,14 +245,13 @@
           ::  XX just error on all other resources for now
           ::     different URI schemes require different handlers
           :_  this
-          %^    send
-              200
-            ~
-          :-  %json
-          %:  rpc-error:ml
-              rpc-method-not-found:ml
-              (crip "Resource {<u.uri>} not found")
-              id
+          %:  send-event
+              eyre-id
+              %:  rpc-error:ml
+                  rpc-method-not-found:ml
+                  (crip "Resource {<u.uri>} not found")
+                  id
+              ==
           ==
         ::
             [~ [%s %'prompts/get']]
@@ -274,7 +259,7 @@
             (fall (mole |.((~(deg jo:ju jon) /params/name so:dejs:format))) ~)
           ?~  prompt-name
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid prompt name' id))
+            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid prompt name' id))
           =/  prompt-results
             %+  murn
               ~(tap in prompts)
@@ -285,49 +270,48 @@
             `prompt
           ?~  prompt-results
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-method-not-found:ml (crip "Prompt {<u.prompt-name>} not found") id))
+            (send-event eyre-id (rpc-error:ml rpc-method-not-found:ml (crip "Prompt {<u.prompt-name>} not found") id))
           ?:  (gth 1 (lent prompt-results))
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.prompt-name>} prompts found") id))
+            (send-event eyre-id (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.prompt-name>} prompts found") id))
           =/  =prompt:mcp  i.prompt-results
           :_  this
-          %^    send
-              200
-            ~
-          :-  %json
-          %-  rpc-result:ml
-          :-  %-  pairs:enjs:format
-              :~  ['name' s+name.prompt]
-                  ['title' s+title.prompt]
-                  ['description' s+desc.prompt]
-                  :-  'arguments'
-                  :-  %a
-                  %+  turn
-                    arguments.prompt
-                  |=  arg=prompt-argument:mcp
-                  ^-  json
-                  %-  pairs:enjs:format
-                  %+  welp
-                    :~  ['name' s+name.arg]
-                        ['description' s+desc.arg]
-                        ['required' b+required.arg]
-                    ==
-                  ?~  parameter-type.arg  ~
-                  :~  ['type' s+(param-type-to-json:ml u.parameter-type.arg)]
+          %:  send-event
+              eyre-id
+              %-  rpc-result:ml
+              :-  %-  pairs:enjs:format
+                  :~  ['name' s+name.prompt]
+                      ['title' s+title.prompt]
+                      ['description' s+desc.prompt]
+                      :-  'arguments'
+                      :-  %a
+                      %+  turn
+                        arguments.prompt
+                      |=  arg=prompt-argument:mcp
+                      ^-  json
+                      %-  pairs:enjs:format
+                      %+  welp
+                        :~  ['name' s+name.arg]
+                            ['description' s+desc.arg]
+                            ['required' b+required.arg]
+                        ==
+                      ?~  parameter-type.arg  ~
+                      :~  ['type' s+(param-type-to-json:ml u.parameter-type.arg)]
+                      ==
                   ==
-              ==
-          id
+              id
+          ==
         ::
             [~ [%s %'tools/call']]
           =/  rpc-id=(unit @ud)  (bind id ni:dejs:format)
           ?~  rpc-id
             :_  this
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing JSON RPC request ID' id))
+            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing JSON RPC request ID' id))
           :_  this
           =/  tool-name=(unit @t)  
             (fall (mole |.((~(deg jo:ju jon) /params/name so:dejs:format))) ~)
           ?~  tool-name
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid tool name' id))
+            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid tool name' id))
           =/  tool-results
             %+  murn
               ~(tap in tools)
@@ -338,18 +322,18 @@
               ~
             `foo
           ?~  tool-results
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<u.tool-name>} not found") id))
+            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<u.tool-name>} not found") id))
           ?:  (gth 1 (lent tool-results))
-            (send 200 ~ %json (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.tool-name>} tools found") id))
+            (send-event eyre-id (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.tool-name>} tools found") id))
           =/  arguments=(unit json)  (~(get jo:ju jon) /params/arguments)
           ?~  arguments
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Missing arguments' id))
+            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing arguments' id))
           =/  args-map=(unit (map @t json))
             ?:  ?=([%o *] u.arguments)
               `p.u.arguments
             ~
           ?~  args-map
-            (send 200 ~ %json (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id))
+            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id))
           ^-  (list card)
           :~  :*  %pass  /thread-result/[eyre-id]/(scot %ud u.rpc-id)
                   %arvo  %k
@@ -403,11 +387,7 @@
       =+  send=(cury response:schooner eyre-id.pole)
       ?:  ?=(%.n -.p.sign-arvo)
         :_  this
-        %^    send
-            500
-          ~
-        :-  %json
-        (rpc-error:ml rpc-internal-error:ml (crip (print-tang-to-wain tang.p.p.sign-arvo)) `[%n id.pole])
+        (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml (crip (print-tang-to-wain tang.p.p.sign-arvo)) `[%n id.pole]))
       ?>  ?=([%khan %arow %.y %noun *] sign-arvo)
       =/  [%khan %arow %.y %noun =vase]  sign-arvo
       =/  tool-result=json  !<(json vase)
@@ -433,12 +413,9 @@
         ==
       ?~  text-content
         :_  this
-        %^    send
-            500
-          ~
-        :-  %json
-        (rpc-error:ml rpc-internal-error:ml 'Invalid tool response format' `[%n id.pole])
-      [(send [200 ~ [%json (mcp-text-result:ml u.text-content `[%n id.pole])]]) this]
+        (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Invalid tool response format' `[%n id.pole]))
+      :_  this
+      (send-event eyre-id.pole (mcp-text-result:ml u.text-content `[%n id.pole]))
     ==
   ::
       [%resource eyre-id=@ta id=@ud uri=@ta ~]
@@ -450,20 +427,12 @@
       =/  =client-response:iris  client-response.sign-arvo
       ?+  -.client-response
         :_  this
-        %^    send
-            500
-          ~
-        :-  %json
-        (rpc-error:ml rpc-internal-error:ml 'Unexpected Iris response type' `[%n id.pole])
+        (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Unexpected Iris response type' `[%n id.pole]))
       ::
           %finished
         ?~  full-file.client-response
           :_  this
-          %^    send
-              500
-            ~
-          :-  %json
-          (rpc-error:ml rpc-internal-error:ml 'Empty HTTP response body' `[%n id.pole])
+          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Empty HTTP response body' `[%n id.pole]))
         =/  =response-header:http  response-header.client-response
         =/  content-type=@t
           ?~  content-type-header=(get-header:http 'content-type' headers.response-header)
@@ -472,22 +441,21 @@
         =/  body-text=@t
           (rap 3 ~[q.data.u.full-file.client-response])
         :_  this
-        %^    send
-            200
-          ~
-        :-  %json
-        %-  rpc-result:ml
-        :-  %-  pairs:enjs:format
-            :~  :-  'contents'
-                :-  %a
-                :~  %-  pairs:enjs:format
-                    :~  ['uri' s+(@t (slav %t uri.pole))]
-                        ['mimeType' s+content-type]
-                        ['text' s+body-text]
+        %:  send-event
+            eyre-id.pole
+            %-  rpc-result:ml
+            :-  %-  pairs:enjs:format
+                :~  :-  'contents'
+                    :-  %a
+                    :~  %-  pairs:enjs:format
+                        :~  ['uri' s+(@t (slav %t uri.pole))]
+                            ['mimeType' s+content-type]
+                            ['text' s+body-text]
+                        ==
                     ==
                 ==
-            ==
-        `[%n id.pole]
+            `[%n id.pole]
+        ==
       ==
     ==
   ==
