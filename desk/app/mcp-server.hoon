@@ -73,23 +73,38 @@
   ^-  (quip card _this)
   =/  defaults
     .^((list path) %ct /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default)
+  =/  default-tools
+    %+  murn
+      defaults
+    |=  =path
+    ^-  (unit tool:mcp)
+    ?.  ?=([%fil %default %tools *] path)
+      ~
+    %-  some
+    !<  tool:mcp
+    .^(vase %ca (welp /(scot %p our.bowl)/mcp-server/(scot %da now.bowl) path))
+  ::
   :-  :~  :*  %pass  /eyre/connect
               %arvo  %e  %connect
               [`/apps/mcp-server/api dap.bowl]
           ==
       ==
   %=  this
-    tools      %-  sy
-               %+  murn
-                 defaults
-               |=  =path
-               ^-  (unit tool:mcp)
-               ?.  ?=([%fil %default %tools *] path)
-                 ~
-               %-  some
-               !<  tool:mcp
-               .^(vase %ca (welp /(scot %p our.bowl)/mcp-server/(scot %da now.bowl) path))
+    tools      (sy default-tools)
     resources  %-  sy
+               ^-  (list resource:mcp)
+               %+  welp
+                 ::  add resources for default tools
+                 %+  turn
+                   default-tools
+                 |=  =tool:mcp
+                 ^-  resource:mcp
+                 :*  (crip "beam://{<our.bowl>}/mcp-server/=/fil/default/tools/{<name.tool>}/hoon")
+                     (crip "Urbit MCP tool {<name.tool>}")
+                     (crip "Source code for Urbit MCP tool {<name.tool>}")
+                     `'text/hoon'
+                 ==
+               ::  add default resources
                %+  murn
                  defaults
                |=  =path
