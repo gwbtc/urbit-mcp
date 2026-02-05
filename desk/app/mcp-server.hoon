@@ -99,7 +99,12 @@
                    default-tools
                  |=  =tool:mcp
                  ^-  resource:mcp
-                 :*  (crip "beam://{<our.bowl>}/mcp-server/=/fil/default/tools/{<name.tool>}/hoon")
+                 :*  %-  crip
+                     ;:  welp
+                         "beam://{<our.bowl>}/mcp-server/=/fil/default/tools/"
+                         (trip name.tool)
+                         "/hoon"
+                     ==
                      (crip "Urbit MCP tool {<name.tool>}")
                      (crip "Source code for Urbit MCP tool {<name.tool>}")
                      `'text/hoon'
@@ -239,12 +244,120 @@
           ?~  uri
             :_  this
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid resource URI' id))
-          =/  uri-tape=tape  (trip u.uri)
-          ::  fetch http / https resources with iris
-          ?:  ?|  =("http://" (scag 7 uri-tape))
-                  =("https://" (scag 8 uri-tape))
-              ==
-            =/  request-id=(unit @ud)  (bind id ni:dejs:format)
+          =/  scheme=cord
+            %-  crip
+            %-  head
+            %.  (trip u.uri)
+            |=  =tape
+            ^-  (list ^tape)
+            =|  res=(list ^tape)
+            |-
+            ?~  tape
+              (flop res)
+            =/  off  (find "://" tape)
+            ?~  off
+              (flop [`^tape`tape `(list ^tape)`res])
+            %=  $
+              res   [(scag `@ud`(need off) `^tape`tape) res]
+              tape  (slag +(`@ud`(need off)) `^tape`tape)
+            ==
+          ?+  scheme
+            :_  this
+            %:  send-event
+                eyre-id
+                %:  rpc-error:ml
+                    rpc-invalid-request:ml
+                    (crip "Scheme not supported for URI {<u.uri>}")
+                    id
+                ==
+            ==
+          ::
+              %'beam'
+            =>  |%
+                ++  parse-beam-uri
+                  |=  =cord
+                  ^-  (unit beam)
+                  ::  we don't need to validate the scheme here,
+                  ::  but a canonical beam:// URI parser should
+                  =/  stub-count
+                    %+  roll
+                      (trip cord)
+                    |=  [a=@tD b=@ud]
+                    ?:  =(a '=')
+                      +(b)
+                    b
+                  ?.  (gte 3 stub-count)
+                    ::  fail; a beam:// can have no more than three stubs
+                    ~
+                  ?:  =(0 stub-count)
+                    ::  skip dereferencing
+                    (de-beam (stab cord))
+                  |^  %.  %+  turn
+                            %+  split
+                              "/"
+                            ::  normalise e.g. /===/ to /=/=/=/
+                            ::  works for any combination of values and =
+                            %^    replace
+                                "=="
+                              "=/="
+                            ::  remove beam:/, leaving / prefix on the tape
+                            (oust [0 7] (trip cord))
+                          crip
+                      ::  replace = path segments with default values
+                      |=  =(pole @t)
+                      ^-  (unit beam)
+                      ?+  pole  ~
+                          [her=@t dek=@t cas=@t und=*]
+                        %-  de-beam
+                        %-  stab
+                        %-  crip
+                        ;:  welp
+                            "/"
+                            ?.  =('=' her.pole)  (trip her.pole)  "{<our.bowl>}"
+                            "/"
+                            ::  XX don't hard-code %base and do *desk?
+                            ?.  =('=' dek.pole)  (trip dek.pole)  "base"
+                            "/"
+                            ?.  =('=' cas.pole)  (trip cas.pole)  "{<now.bowl>}"
+                            "/"
+                            (zing (turn (join '/' und.pole) trip))
+                        ==
+                      ==
+                  ::
+                  :: ~lagrev-nocfep/yard/~2026.2.5/lib/string/hoon
+                  ++  replace
+                    |=  [bit=tape bot=tape =tape]
+                    ^-  ^tape
+                    |-
+                    =/  off  (find bit tape)
+                    ?~  off  tape
+                    =/  clr  (oust [(need off) (lent bit)] tape)
+                    $(tape :(weld (scag (need off) clr) bot (slag (need off) clr)))
+                  ++  split
+                    |=  [sep=tape =tape]
+                    ^-  (list ^tape)
+                    =|  res=(list ^tape)
+                    |-
+                    ?~  tape  (flop res)
+                    =/  off  (find sep tape)
+                    ?~  off  (flop [`^tape`tape `(list ^tape)`res])
+                    %=  $
+                      res   [(scag `@ud`(need off) `^tape`tape) res]
+                      tape  (slag +(`@ud`(need off)) `^tape`tape)
+                    ==
+                  --
+                --
+            =/  parsed-beam=(unit beam)
+              (parse-beam-uri u.uri)
+            ?~  parsed-beam
+              ::  XX RPC error
+              `this
+            ::  XX branch on whether the ship is ours
+            `this
+          ::
+              ?(%'http' %'https')
+            =/  request-id=(unit @ud)
+              (bind id ni:dejs:format)
             ?~  request-id
               :_  this
               (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
@@ -256,16 +369,6 @@
                     [%request [%'GET' u.uri ~ ~] *outbound-config:iris]
                 ==
             ==
-          ::  XX just error on all other resources for now
-          ::     different URI schemes require different handlers
-          :_  this
-          %:  send-event
-              eyre-id
-              %:  rpc-error:ml
-                  rpc-method-not-found:ml
-                  (crip "Resource {<u.uri>} not found")
-                  id
-              ==
           ==
         ::
             [~ [%s %'prompts/get']]
