@@ -350,10 +350,27 @@
             =/  parsed-beam=(unit beam)
               (parse-beam-uri u.uri)
             ?~  parsed-beam
-              ::  XX RPC error
-              `this
-            ::  XX branch on whether the ship is ours
-            `this
+              :_  this
+              %:  send-event
+                  eyre-id
+                  %:  rpc-error:ml
+                      rpc-invalid-request:ml
+                      (crip "Invalid beam {<u.uri>}")
+                      id
+                  ==
+              ==
+            =/  request-id=(unit @ud)
+              (bind id ni:dejs:format)
+            ?~  request-id
+              :_  this
+              (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
+            :_  this
+            :~  :*  %pass  /thread-result/[eyre-id]/(scot %ud u.request-id)
+                    %arvo  %k
+                    %fard  q.byk.bowl
+                    %read-beam  %beam  !>(parsed-beam)
+                ==
+            ==
           ::
               ?(%'http' %'https')
             =/  request-id=(unit @ud)

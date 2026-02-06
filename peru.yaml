@@ -1,6 +1,15 @@
 imports:
   base-dev: ./dist
+  pkg-arvo: ./dist
   yard-dev: ./dist
+
+git module pkg-arvo:
+  url:    https://github.com/urbit/urbit
+  reup:   master
+  export: pkg/arvo
+  pick:
+    - pkg/arvo/lib/pretty-file.hoon
+  rev: 41dd3b5f7c554ac615d0db9eaa5fe46071d47bc8
 
 git module yard-dev:
   url:    https://github.com/urbit/yard
