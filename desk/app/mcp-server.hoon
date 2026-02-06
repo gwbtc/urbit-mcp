@@ -64,9 +64,10 @@
   |=  =vase
   ^-  (quip card _this)
   =/  old  !<(versioned-state vase)
+  :-  ~
   ?-    -.old
       %0
-    `this(state old)
+    this(state old)
   ==
 ::
 ++  on-init
