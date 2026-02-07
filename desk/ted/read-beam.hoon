@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, ju=json-utils, pf=pretty-file
+/+  io=strandio, pf=pretty-file
 =,  strand-fail=strand-fail:strand:spider
 =>
 |%

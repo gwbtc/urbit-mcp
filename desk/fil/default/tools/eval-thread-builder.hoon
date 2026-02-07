@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, ju=json-utils
+/+  io=strandio, jut=json-utils
 =,  strand-fail=strand-fail:strand:spider
 ^-  tool:mcp
 :*  'eval-thread-builder'
@@ -41,7 +41,7 @@
     ^-  form:m
     =/  jon=json  [%o args]
     =/  hoon-text=(unit @t)
-      (~(deg jo:ju jon) /hoon so:dejs:format)
+      (~(deg jo:jut jon) /hoon so:dejs:format)
     ?~  hoon-text
       (strand-fail %missing-argument ~)
     ;<  =beak  bind:m  get-beak:io

@@ -1,6 +1,6 @@
 /-  mcp
 /+  dbug, verb, server, schooner, default-agent,
-    ju=json-utils, ml=mcp
+    jut=json-utils, ml=mcp
 |%
 ++  print-tang-to-wain
   |=  =tang
@@ -185,8 +185,8 @@
           [(send [400 ~ [%stock ~]]) this]
         %.  u.parsed
         |=  jon=json
-        =/  id=(unit json)      (~(get jo:ju jon) /id)
-        =/  method=(unit json)  (~(get jo:ju jon) /method)
+        =/  id=(unit json)      (~(get jo:jut jon) /id)
+        =/  method=(unit json)  (~(get jo:jut jon) /method)
         ?+  method
           :_  this
           (send-event eyre-id (rpc-error:ml rpc-method-not-found:ml 'Method not found' id))
@@ -241,7 +241,7 @@
         ::
             [~ [%s %'resources/read']]
           =/  uri=(unit @t)
-            (~(deg jo:ju jon) /params/uri so:dejs:format)
+            (~(deg jo:jut jon) /params/uri so:dejs:format)
           ?~  uri
             :_  this
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid resource URI' id))
@@ -391,7 +391,7 @@
         ::
             [~ [%s %'prompts/get']]
           =/  prompt-name=(unit @t)
-            (~(deg jo:ju jon) /params/name so:dejs:format)
+            (~(deg jo:jut jon) /params/name so:dejs:format)
           ?~  prompt-name
             :_  this
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid prompt name' id))
@@ -444,7 +444,7 @@
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing JSON RPC request ID' id))
           :_  this
           =/  tool-name=(unit @t)  
-            (~(deg jo:ju jon) /params/name so:dejs:format)
+            (~(deg jo:jut jon) /params/name so:dejs:format)
           ?~  tool-name
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid tool name' id))
           =/  tool-results
@@ -460,7 +460,7 @@
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<u.tool-name>} not found") id))
           ?:  (gth 1 (lent tool-results))
             (send-event eyre-id (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.tool-name>} tools found") id))
-          =/  arguments=(unit json)  (~(get jo:ju jon) /params/arguments)
+          =/  arguments=(unit json)  (~(get jo:jut jon) /params/arguments)
           ?~  arguments
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing arguments' id))
           =/  args-map=(unit (map @t json))
@@ -535,9 +535,9 @@
         ::
             [%o *]
           =/  type-text=(unit @t)
-            (~(deg jo:ju tool-result) /type so:dejs:format)
+            (~(deg jo:jut tool-result) /type so:dejs:format)
           =/  content-text=(unit @t)
-            (~(deg jo:ju tool-result) /text so:dejs:format)
+            (~(deg jo:jut tool-result) /text so:dejs:format)
           ?~  type-text
             ~
           ?~  content-text

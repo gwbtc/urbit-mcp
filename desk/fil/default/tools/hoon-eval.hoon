@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, ju=json-utils
+/+  io=strandio, jut=json-utils
 =,  strand-fail=strand-fail:strand:spider
 ^-  tool:mcp
 :*  'hoon-eval'
@@ -28,7 +28,7 @@
   ^-  form:m
   =/  args-json=json  [%o args]
   =/  hoon-text=(unit @t)
-    (~(deg jo:ju args-json) /hoon so:dejs:format)
+    (~(deg jo:jut args-json) /hoon so:dejs:format)
   ?~  hoon-text
     (strand-fail %missing-argument ~)
   ;<    vax=vase

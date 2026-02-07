@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, ju=json-utils
+/+  io=strandio, jut=json-utils
 =,  strand-fail=strand-fail:strand:spider
 ^-  tool:mcp
 :*  'add-mcp-tool'
@@ -25,17 +25,17 @@
     ^-  form:m
     =/  args-json=json  [%o args]
     =/  nam=(unit @t)
-      (~(deg jo:ju args-json) /name so:dejs:format)
+      (~(deg jo:jut args-json) /name so:dejs:format)
     =/  des=(unit @t)
-      (~(deg jo:ju args-json) /desc so:dejs:format)
+      (~(deg jo:jut args-json) /desc so:dejs:format)
     =/  parameters=(unit (map @t json))
-      ?~  param-json=(~(get jo:ju args-json) /parameters)  ~
+      ?~  param-json=(~(get jo:jut args-json) /parameters)  ~
       ?.  ?=([%o *] u.param-json)  ~
       `p.u.param-json
     =/  required=(unit (list @t))
-      (~(deg jo:ju args-json) /required (ar so):dejs:format)
+      (~(deg jo:jut args-json) /required (ar so):dejs:format)
     =/  thread-builder=(unit @t)
-      (~(deg jo:ju args-json) /thread-builder so:dejs:format)
+      (~(deg jo:jut args-json) /thread-builder so:dejs:format)
     ?~  nam  ~|(%missing-name !!)
     ?~  des  ~|(%missing-desc !!)
     ?~  parameters  ~|(%missing-parameters !!)
@@ -63,9 +63,9 @@
         ~|(%invalid-parameter-definition !!)
       :-  name
       =/  type-text=(unit @t)
-        (~(deg jo:ju json) /type so:dejs:format)
+        (~(deg jo:jut json) /type so:dejs:format)
       =/  desc-text=(unit @t)
-        (~(deg jo:ju json) /description so:dejs:format)
+        (~(deg jo:jut json) /description so:dejs:format)
       ?~  type-text
         ~|(%missing-parameter-type !!)
       ?~  desc-text

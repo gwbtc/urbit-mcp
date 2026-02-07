@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, ju=json-utils
+/+  io=strandio, jut=json-utils
 ^-  tool:mcp
 :*  'commit-desk'
     'Commit code changes to a desk. If this errors with a timeout, there are no changes to commit.'
@@ -53,7 +53,7 @@
     ^-  form:m
     =/  args-json=json  [%o args]
     =/  desk-name=(unit @t)
-      (~(deg jo:ju args-json) /desk so:dejs:format)
+      (~(deg jo:jut args-json) /desk so:dejs:format)
     ?~  desk-name  ~|(%missing-desk !!)
     =/  desk=@tas  (@tas u.desk-name)
     ;<  ~  bind:m

@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, ju=json-utils, pf=pretty-file
+/+  io=strandio, jut=json-utils, pf=pretty-file
 =,  strand-fail=strand-fail:strand:spider
 =>
 |%
@@ -37,12 +37,12 @@
       bind:m
     get-bowl:io
   =/  jon=json  [%o args]
-  =/  pax=(unit path)  (~(deg jo:ju jon) /path pa:dejs:format)
+  =/  pax=(unit path)  (~(deg jo:jut jon) /path pa:dejs:format)
   ?~  pax
     (strand-fail %no-path ~)
-  =/  her=(unit ship)   (~(deg jo:ju jon) /ship (se %p):dejs:format)
-  =/  dek=(unit desk)   (~(deg jo:ju jon) /desk (se %tas):dejs:format)
-  =/  cast=(unit tape)  (~(deg jo:ju jon) /case sa:dejs:format)
+  =/  her=(unit ship)   (~(deg jo:jut jon) /ship (se %p):dejs:format)
+  =/  dek=(unit desk)   (~(deg jo:jut jon) /desk (se %tas):dejs:format)
+  =/  cast=(unit tape)  (~(deg jo:jut jon) /case sa:dejs:format)
   =/  cuse=(unit case)
     ?~  cast
       `da+now.bowl
