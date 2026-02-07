@@ -8,37 +8,57 @@
 ::  - Handles MCP protocol-specific requests (initialize, tools/list, tools/call)
 ::  - Delegates tool execution to lib/tools
 ::
-::  JSON-RPC 2.0 error codes
-::
-++  rpc-parse-error       ~.-32700
-++  rpc-invalid-request   ~.-32600
-++  rpc-method-not-found  ~.-32601
-++  rpc-invalid-params    ~.-32602
-++  rpc-internal-error    ~.-32603
-::  JSON-RPC helper functions
-::
-++  rpc-error
-  |=  [code=@ta message=@t id=(unit json)]
-  ^-  json
-  %-  pairs:enjs:format
-  %+  welp
-    ?~(id ~ ['id' u.id]~)
-  :~  ['jsonrpc' s+'2.0']
-      :-  'error'
+++  rpc
+  |%
+  ++  result
+    |=  [result=json id=(unit json)]
+    %-  pairs:enjs:format
+    %+  welp
+      ?~(id ~ ['id' u.id]~)
+    :~  ['jsonrpc' s+'2.0']
+        ['result' result]
+    ==
+  ++  error
+    |%
+    ++  code
+    |%
+    ++  parse-error       ~.-32700
+    ++  invalid-request   ~.-32600
+    ++  method-not-found  ~.-32601
+    ++  invalid-params    ~.-32602
+    ++  internal-error    ~.-32603
+    --
+    ++  make
+      |=  [code=@ta message=@t id=(unit json)]
+      ^-  json
       %-  pairs:enjs:format
-      :~  ['code' n+code]
-          ['message' s+message]
+      %+  welp
+        ?~(id ~ ['id' u.id]~)
+      :~  ['jsonrpc' s+'2.0']
+          :-  'error'
+          %-  pairs:enjs:format
+          :~  ['code' n+code]
+              ['message' s+message]
+          ==
       ==
-  ==
+    ++  parse
+      |=  [message=@t id=(unit json)]
+      (make parse-error:code message id)
+    ++  request
+      |=  [message=@t id=(unit json)]
+      (make invalid-request:code message id)
+    ++  method
+      |=  [message=@t id=(unit json)]
+      (make method-not-found:code message id)
+    ++  params
+      |=  [message=@t id=(unit json)]
+      (make invalid-params:code message id)
+    ++  internal
+      |=  [message=@t id=(unit json)]
+      (make internal-error:code message id)
+    --
+  --
 ::
-++  rpc-result
-  |=  [result=json id=(unit json)]
-  %-  pairs:enjs:format
-  %+  welp
-    ?~(id ~ ['id' u.id]~)
-  :~  ['jsonrpc' s+'2.0']
-      ['result' result]
-  ==
 ::  MCP-specific response helpers
 ::
 ++  mcp-text-result

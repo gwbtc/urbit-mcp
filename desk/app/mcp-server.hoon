@@ -158,7 +158,7 @@
     ?.  authenticated.req
       =+  send=(cury response:schooner eyre-id)
       :_  this
-      (send-event eyre-id (rpc-error:ml rpc-internal-error:ml 'Authentication required' ~))
+      (send-event eyre-id (internal:error:rpc:ml 'Authentication required' ~))
     =/  lin=request-line:server
       (parse-request-line:server url.request.req)
     ::  =/  site=(list @t)  site.lin
@@ -189,7 +189,7 @@
         =/  method=(unit json)  (~(get jo:jut jon) /method)
         ?+  method
           :_  this
-          (send-event eyre-id (rpc-error:ml rpc-method-not-found:ml 'Method not found' id))
+          (send-event eyre-id (method:error:rpc:ml 'Method not found' id))
         ::
             [~ [%s %'notifications/initialized']]
           [(send [200 ~ [%none ~]]) this]
@@ -229,22 +229,22 @@
         ::
             [~ [%s %'tools/list']]
           :_  this
-          (send-event eyre-id (rpc-result:ml (mcp-tools-to-json:ml tools) id))
+          (send-event eyre-id (result:rpc:ml (mcp-tools-to-json:ml tools) id))
         ::
             [~ [%s %'resources/list']]
           :_  this
-          (send-event eyre-id (rpc-result:ml (mcp-resources-to-json:ml resources) id))
+          (send-event eyre-id (result:rpc:ml (mcp-resources-to-json:ml resources) id))
         ::
             [~ [%s %'prompts/list']]
           :_  this
-          (send-event eyre-id (rpc-result:ml (mcp-prompts-to-json:ml prompts) id))
+          (send-event eyre-id (result:rpc:ml (mcp-prompts-to-json:ml prompts) id))
         ::
             [~ [%s %'resources/read']]
           =/  uri=(unit @t)
             (~(deg jo:jut jon) /params/uri so:dejs:format)
           ?~  uri
             :_  this
-            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid resource URI' id))
+            (send-event eyre-id (params:error:rpc:ml 'Missing or invalid resource URI' id))
           =/  scheme=cord
             %-  crip
             %-  head
@@ -266,8 +266,7 @@
             :_  this
             %:  send-event
                 eyre-id
-                %:  rpc-error:ml
-                    rpc-invalid-request:ml
+                %:  request:error:rpc:ml
                     (crip "Scheme not supported for URI {<u.uri>}")
                     id
                 ==
@@ -354,8 +353,7 @@
               :_  this
               %:  send-event
                   eyre-id
-                  %:  rpc-error:ml
-                      rpc-invalid-request:ml
+                  %:  request:error:rpc:ml
                       (crip "Invalid beam {<u.uri>}")
                       id
                   ==
@@ -364,7 +362,7 @@
               (bind id ni:dejs:format)
             ?~  request-id
               :_  this
-              (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
+              (send-event eyre-id (params:error:rpc:ml 'Missing or invalid JSON RPC request ID' ~))
             :_  this
             :~  :*  %pass  /res/resource/[eyre-id]/(scot %ud u.request-id)
                     %arvo  %k
@@ -378,7 +376,7 @@
               (bind id ni:dejs:format)
             ?~  request-id
               :_  this
-              (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
+              (send-event eyre-id (params:error:rpc:ml 'Missing or invalid JSON RPC request ID' ~))
             :_  this
             :~  :*  %pass
                     /res/resource/[eyre-id]/(scot %ud u.request-id)/[u.uri]
@@ -394,7 +392,7 @@
             (~(deg jo:jut jon) /params/name so:dejs:format)
           ?~  prompt-name
             :_  this
-            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid prompt name' id))
+            (send-event eyre-id (params:error:rpc:ml 'Missing or invalid prompt name' id))
           =/  prompt-results
             %+  murn
               ~(tap in prompts)
@@ -405,15 +403,15 @@
             `prompt
           ?~  prompt-results
             :_  this
-            (send-event eyre-id (rpc-error:ml rpc-method-not-found:ml (crip "Prompt {<u.prompt-name>} not found") id))
+            (send-event eyre-id (method:error:rpc:ml (crip "Prompt {<u.prompt-name>} not found") id))
           ?:  (gth 1 (lent prompt-results))
             :_  this
-            (send-event eyre-id (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.prompt-name>} prompts found") id))
+            (send-event eyre-id (internal:error:rpc:ml (crip "Multiple {<u.prompt-name>} prompts found") id))
           =/  =prompt:mcp  i.prompt-results
           :_  this
           %:  send-event
               eyre-id
-              %-  rpc-result:ml
+              %-  result:rpc:ml
               :-  %-  pairs:enjs:format
                   :~  ['name' s+name.prompt]
                       ['title' s+title.prompt]
@@ -441,12 +439,12 @@
           =/  rpc-id=(unit @ud)  (bind id ni:dejs:format)
           ?~  rpc-id
             :_  this
-            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing JSON RPC request ID' id))
+            (send-event eyre-id (params:error:rpc:ml 'Missing JSON RPC request ID' id))
           :_  this
           =/  tool-name=(unit @t)  
             (~(deg jo:jut jon) /params/name so:dejs:format)
           ?~  tool-name
-            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid tool name' id))
+            (send-event eyre-id (params:error:rpc:ml 'Missing or invalid tool name' id))
           =/  tool-results
             %+  murn
               ~(tap in tools)
@@ -457,18 +455,18 @@
               ~
             `foo
           ?~  tool-results
-            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml (crip "Tool {<u.tool-name>} not found") id))
+            (send-event eyre-id (params:error:rpc:ml (crip "Tool {<u.tool-name>} not found") id))
           ?:  (gth 1 (lent tool-results))
-            (send-event eyre-id (rpc-error:ml rpc-internal-error:ml (crip "Multiple {<u.tool-name>} tools found") id))
+            (send-event eyre-id (internal:error:rpc:ml (crip "Multiple {<u.tool-name>} tools found") id))
           =/  arguments=(unit json)  (~(get jo:jut jon) /params/arguments)
           ?~  arguments
-            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing arguments' id))
+            (send-event eyre-id (params:error:rpc:ml 'Missing arguments' id))
           =/  args-map=(unit (map @t json))
             ?:  ?=([%o *] u.arguments)
               `p.u.arguments
             ~
           ?~  args-map
-            (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id))
+            (send-event eyre-id (params:error:rpc:ml 'Invalid arguments' id))
           ^-  (list card)
           :~  :*  %pass  /res/tool/[eyre-id]/(scot %ud u.rpc-id)
                   %arvo  %k
@@ -524,7 +522,7 @@
         :_  this
         %+  send-event
           eyre-id.pole
-        (rpc-error:ml rpc-internal-error:ml (crip (print-tang-to-wain tang.p.p.sign-arvo)) `[%n rpc-id.pole])
+        (internal:error:rpc:ml (crip (print-tang-to-wain tang.p.p.sign-arvo)) `[%n rpc-id.pole])
       ?>  ?=([%khan %arow %.y %noun *] sign-arvo)
       =/  [%khan %arow %.y %noun =vase]  sign-arvo
       =/  result=json  !<(json vase)
@@ -532,7 +530,7 @@
         :_  this
         %+  send-event
           eyre-id.pole
-        (rpc-error:ml rpc-internal-error:ml 'Unknown response type' `[%n rpc-id.pole])
+        (internal:error:rpc:ml 'Unknown response type' `[%n rpc-id.pole])
       ::
           %tool
         =/  response-text=(unit @t)
@@ -557,7 +555,7 @@
           :_  this
           %+  send-event
             eyre-id.pole
-          (rpc-error:ml rpc-internal-error:ml 'Invalid tool response format' `[%n rpc-id.pole])
+          (internal:error:rpc:ml 'Invalid tool response format' `[%n rpc-id.pole])
         :_  this
         %+  send-event
           eyre-id.pole
@@ -569,17 +567,17 @@
         =/  txt=(unit @t)  (~(deg jo:jut result) /text so:dejs:format)
         ?~  uri
           :_  this
-          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Missing uri in resource response' `[%n rpc-id.pole]))
+          (send-event eyre-id.pole (internal:error:rpc:ml 'Missing uri in resource response' `[%n rpc-id.pole]))
         ?~  mym
           :_  this
-          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Missing mimeType in resource response' `[%n rpc-id.pole]))
+          (send-event eyre-id.pole (internal:error:rpc:ml 'Missing mimeType in resource response' `[%n rpc-id.pole]))
         ?~  txt
           :_  this
-          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Missing text in resource response' `[%n rpc-id.pole]))
+          (send-event eyre-id.pole (internal:error:rpc:ml 'Missing text in resource response' `[%n rpc-id.pole]))
         :_  this
         %:  send-event
             eyre-id.pole
-            %-  rpc-result:ml
+            %-  result:rpc:ml
             :-  %-  pairs:enjs:format
                 :~  :-  'contents'
                     :-  %a
@@ -602,12 +600,12 @@
       =/  =client-response:iris  client-response.sign-arvo
       ?+  -.client-response
         :_  this
-        (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Unexpected Iris response type' `[%n rpc-id.pole]))
+        (send-event eyre-id.pole (internal:error:rpc:ml 'Unexpected Iris response type' `[%n rpc-id.pole]))
       ::
           %finished
         ?~  full-file.client-response
           :_  this
-          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Empty HTTP response body' `[%n rpc-id.pole]))
+          (send-event eyre-id.pole (internal:error:rpc:ml 'Empty HTTP response body' `[%n rpc-id.pole]))
         =/  =response-header:http  response-header.client-response
         =/  content-type=@t
           ?~  content-type-header=(get-header:http 'content-type' headers.response-header)
@@ -618,7 +616,7 @@
         :_  this
         %:  send-event
             eyre-id.pole
-            %-  rpc-result:ml
+            %-  result:rpc:ml
             :-  %-  pairs:enjs:format
                 :~  :-  'contents'
                     :-  %a
