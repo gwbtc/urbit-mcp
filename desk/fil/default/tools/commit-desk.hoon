@@ -19,6 +19,33 @@
         (wash [0 80] tank)
       |=  =tape
       (crip tape)
+    ::
+    ::  rough, heuristic, opinionated
+    ::  filter on userspace errors
+    ++  prune-err
+      |=  =tang
+      ^-  (list tank)
+      %+  murn
+        tang
+      |=  tak=tank
+      ^-  (unit tank)
+      ?+  tak
+        ::  just a cord
+        `tak
+      ::
+          [%leaf *]  ?~(p.tak ~ `[%leaf p.tak])
+      ::
+          [%palm *]  ?~(q.tak ~ `[%palm p.tak (prune-err q.tak)])
+      ::
+          [%rose *]
+        ?~  q.tak
+          ~
+        ?:  ?|  =(i.q.tak [%leaf "sys"])
+                =(p.tak [":" "" ""])
+            ==
+          ~
+        `[%rose p.tak (prune-err q.tak)]
+      ==
     --
     |=  args=(map @t json)
     ^-  shed:khan
@@ -45,7 +72,7 @@
       !>  ^-  json
       %-  pairs:enjs:format
       :~  ['type' s+'text']
-          ['text' s+(crip "{<[%error p.told (print-tang-to-wain q.told)]>}")]
+          ['text' s+(crip "{<[%error p.told (print-tang-to-wain (prune-err q.told))]>}")]
       ==
     ::
       [%talk *]
