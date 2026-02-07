@@ -14,6 +14,20 @@
     (wash [0 80] tank)
   |=  =tape
   (crip tape)
+::
+++  mark-mime
+  |=  =mark
+  ^-  @t
+  ?+  mark  'application/octet-stream'
+    %css   'text/css'
+    %hoon  'text/hoon'
+    %html  'text/html'
+    %js    'text/javascript'
+    %json  'application/json'
+    %md    'text/markdown'
+    %txt   'text/plain'
+    %xml   'application/xml'
+  ==
 --
 ::
 ^-  thread:spider
@@ -27,7 +41,9 @@
 %-  pure:m
 !>  ^-  json
 %-  pairs:enjs:format
-:~  ['type' s+'text']
+:~  ['uri' s+(crip (welp "beam://" (spud (en-beam beam))))]
+    ::  internal use only, replaced with mimeType in the agent
+    ['mime-type' s+(mark-mime (rear s.beam))]
     :-  'text'
     :-  %s
     ?~  riot

@@ -366,7 +366,7 @@
               :_  this
               (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
             :_  this
-            :~  :*  %pass  /thread-result/[eyre-id]/(scot %ud u.request-id)
+            :~  :*  %pass  /res/resource/[eyre-id]/(scot %ud u.request-id)
                     %arvo  %k
                     %fard  q.byk.bowl
                     %read-beam  %beam  !>(parsed-beam)
@@ -381,7 +381,7 @@
               (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid JSON RPC request ID' ~))
             :_  this
             :~  :*  %pass
-                    /resource/[eyre-id]/[(scot %ud u.request-id)]/(scot %t u.uri)
+                    /res/resource/[eyre-id]/(scot %ud u.request-id)/[u.uri]
                     %arvo
                     %i
                     [%request [%'GET' u.uri ~ ~] *outbound-config:iris]
@@ -470,7 +470,7 @@
           ?~  args-map
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Invalid arguments' id))
           ^-  (list card)
-          :~  :*  %pass  /thread-result/[eyre-id]/(scot %ud u.rpc-id)
+          :~  :*  %pass  /res/tool/[eyre-id]/(scot %ud u.rpc-id)
                   %arvo  %k
                   %lard  q.byk.bowl
                   (thread-builder.i.tool-results u.args-map)
@@ -514,7 +514,7 @@
     %-  (slog leaf/"mcp-server: failed to bind {<dap.bowl>} to /apps/mcp-server/api" ~)
     `this
   ::
-      [%thread-result eyre-id=@ta id=@ud ~]
+      [%res feat=@ta eyre-id=@ta rpc-id=@ta und=*]
     ?+  sign-arvo
       (on-arvo:def pole sign-arvo)
     ::
@@ -522,52 +522,92 @@
       =+  send=(cury response:schooner eyre-id.pole)
       ?:  ?=(%.n -.p.sign-arvo)
         :_  this
-        (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml (crip (print-tang-to-wain tang.p.p.sign-arvo)) `[%n id.pole]))
+        %+  send-event
+          eyre-id.pole
+        (rpc-error:ml rpc-internal-error:ml (crip (print-tang-to-wain tang.p.p.sign-arvo)) `[%n rpc-id.pole])
       ?>  ?=([%khan %arow %.y %noun *] sign-arvo)
       =/  [%khan %arow %.y %noun =vase]  sign-arvo
-      =/  tool-result=json  !<(json vase)
-      =/  text-content=(unit @t)
-        ?+  tool-result
-          ~
-        ::
-            [%s *]
-          `p.tool-result
-        ::
-            [%o *]
-          =/  type-text=(unit @t)
-            (~(deg jo:jut tool-result) /type so:dejs:format)
-          =/  content-text=(unit @t)
-            (~(deg jo:jut tool-result) /text so:dejs:format)
-          ?~  type-text
-            ~
-          ?~  content-text
-            ~
-          ?.  =(u.type-text 'text')
-            ~
-          content-text
-        ==
-      ?~  text-content
+      =/  result=json  !<(json vase)
+      ?+  feat.pole
         :_  this
-        (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Invalid tool response format' `[%n id.pole]))
-      :_  this
-      (send-event eyre-id.pole (mcp-text-result:ml u.text-content `[%n id.pole]))
-    ==
-  ::
-      [%resource eyre-id=@ta id=@ud uri=@ta ~]
-    ?+  sign-arvo
-      (on-arvo:def pole sign-arvo)
+        %+  send-event
+          eyre-id.pole
+        (rpc-error:ml rpc-internal-error:ml 'Unknown response type' `[%n rpc-id.pole])
+      ::
+          %tool
+        =/  response-text=(unit @t)
+          ?+  result
+            ~
+          ::
+              [%s *]
+            `p.result
+          ::
+              [%o *]
+            =/  typ=(unit @t)  (~(deg jo:jut result) /type so:dejs:format)
+            =/  txt=(unit @t)  (~(deg jo:jut result) /text so:dejs:format)
+            ?~  typ
+              ~
+            ?~  txt
+              ~
+            ?.  =(u.typ 'text')
+              ~
+            txt
+          ==
+        ?~  response-text
+          :_  this
+          %+  send-event
+            eyre-id.pole
+          (rpc-error:ml rpc-internal-error:ml 'Invalid tool response format' `[%n rpc-id.pole])
+        :_  this
+        %+  send-event
+          eyre-id.pole
+        (mcp-text-result:ml u.response-text `[%n rpc-id.pole])
+      ::
+          %resource
+        =/  uri=(unit @t)  (~(deg jo:jut result) /uri so:dejs:format)
+        =/  mym=(unit @t)  (~(deg jo:jut result) /mime-type so:dejs:format)
+        =/  txt=(unit @t)  (~(deg jo:jut result) /text so:dejs:format)
+        ?~  uri
+          :_  this
+          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Missing uri in resource response' `[%n rpc-id.pole]))
+        ?~  mym
+          :_  this
+          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Missing mimeType in resource response' `[%n rpc-id.pole]))
+        ?~  txt
+          :_  this
+          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Missing text in resource response' `[%n rpc-id.pole]))
+        :_  this
+        %:  send-event
+            eyre-id.pole
+            %-  rpc-result:ml
+            :-  %-  pairs:enjs:format
+                :~  :-  'contents'
+                    :-  %a
+                    :~  %-  pairs:enjs:format
+                        :~  ['uri' s+u.uri]
+                            ['mimeType' s+u.mym]
+                            ['text' s+u.txt]
+                        ==
+                    ==
+                ==
+            `[%n rpc-id.pole]
+        ==
+      ==
     ::
         [%iris %http-response *]
+      ?<  ?=(~ und.pole)
+      ?>  ?=([@ta ~] und.pole)
+      =*  uri  -.und.pole
       =+  send=(cury response:schooner eyre-id.pole)
       =/  =client-response:iris  client-response.sign-arvo
       ?+  -.client-response
         :_  this
-        (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Unexpected Iris response type' `[%n id.pole]))
+        (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Unexpected Iris response type' `[%n rpc-id.pole]))
       ::
           %finished
         ?~  full-file.client-response
           :_  this
-          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Empty HTTP response body' `[%n id.pole]))
+          (send-event eyre-id.pole (rpc-error:ml rpc-internal-error:ml 'Empty HTTP response body' `[%n rpc-id.pole]))
         =/  =response-header:http  response-header.client-response
         =/  content-type=@t
           ?~  content-type-header=(get-header:http 'content-type' headers.response-header)
@@ -583,13 +623,13 @@
                 :~  :-  'contents'
                     :-  %a
                     :~  %-  pairs:enjs:format
-                        :~  ['uri' s+(@t (slav %t uri.pole))]
+                        :~  ['uri' s+uri]
                             ['mimeType' s+content-type]
                             ['text' s+body-text]
                         ==
                     ==
                 ==
-            `[%n id.pole]
+            `[%n rpc-id.pole]
         ==
       ==
     ==
