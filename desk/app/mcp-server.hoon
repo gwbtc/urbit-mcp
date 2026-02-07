@@ -1,5 +1,5 @@
 /-  mcp
-/+  dbug, verb, server, schooner, default-agent,
+/+  dbug, verb, server, default-agent,
     jut=json-utils, ml=mcp
 |%
 ++  print-tang-to-wain
@@ -13,6 +13,14 @@
     (wash [0 80] tank)
   |=  =tape
   (crip tape)
+::
+++  simple-response
+  |=  [eyre-id=@ta status=@ud headers=(list [key=@t value=@t])]
+  ^-  (list card)
+  %+  give-simple-payload:app:server
+    eyre-id
+  ^-  simple-payload:http
+  [[status headers] ~]
 ::
 ++  send-event
   |=  [eyre-id=@ta =json]
@@ -154,17 +162,13 @@
   ++  handle-req
     |=  [eyre-id=@ta req=inbound-request:eyre]
     ^-  (quip card _this)
-    ::  Check authentication first
     ?.  authenticated.req
-      =+  send=(cury response:schooner eyre-id)
       :_  this
       (send-event eyre-id (internal:error:rpc:ml 'Authentication required' ~))
     =/  lin=request-line:server
       (parse-request-line:server url.request.req)
-    ::  =/  site=(list @t)  site.lin
-    =+  send=(cury response:schooner eyre-id)
     ?+  method.request.req
-      [(send [405 ~ [%stock ~]]) this]
+      [(simple-response eyre-id 405 ~) this]
     ::
         %'GET'
       =/  connection-json=json
@@ -176,13 +180,13 @@
       =/  content-type=(unit @t)
         (get-header:http 'content-type' header-list.request.req)
       ?+  content-type
-        [(send [415 ~ [%stock ~]]) this]
+        [(simple-response eyre-id 415 ~) this]
       ::
           [~ %'application/json']
         =/  parsed=(unit json)
           (de:json:html q:(need body.request.req))
         ?~  parsed
-          [(send [400 ~ [%stock ~]]) this]
+          [(simple-response eyre-id 400 ~) this]
         %.  u.parsed
         |=  jon=json
         =/  id=(unit json)      (~(get jo:jut jon) /id)
@@ -192,7 +196,7 @@
           (send-event eyre-id (method:error:rpc:ml 'Method not found' id))
         ::
             [~ [%s %'notifications/initialized']]
-          [(send [200 ~ [%none ~]]) this]
+          [(simple-response eyre-id 200 ~) this]
         ::
             [~ [%s %'initialize']]
           ::  XX check protocol version?
@@ -517,7 +521,6 @@
       (on-arvo:def pole sign-arvo)
     ::
         [%khan %arow *]
-      =+  send=(cury response:schooner eyre-id.pole)
       ?:  ?=(%.n -.p.sign-arvo)
         :_  this
         %+  send-event
@@ -596,7 +599,6 @@
       ?<  ?=(~ und.pole)
       ?>  ?=([@ta ~] und.pole)
       =*  uri  -.und.pole
-      =+  send=(cury response:schooner eyre-id.pole)
       =/  =client-response:iris  client-response.sign-arvo
       ?+  -.client-response
         :_  this
