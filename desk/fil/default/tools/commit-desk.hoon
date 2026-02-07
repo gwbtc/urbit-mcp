@@ -53,7 +53,7 @@
     ^-  form:m
     =/  args-json=json  [%o args]
     =/  desk-name=(unit @t)
-      (fall (mole |.((~(deg jo:ju args-json) /desk so:dejs:format))) ~)
+      (~(deg jo:ju args-json) /desk so:dejs:format)
     ?~  desk-name  ~|(%missing-desk !!)
     =/  desk=@tas  (@tas u.desk-name)
     ;<  ~  bind:m

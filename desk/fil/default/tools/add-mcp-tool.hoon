@@ -25,17 +25,17 @@
     ^-  form:m
     =/  args-json=json  [%o args]
     =/  nam=(unit @t)
-      (fall (mole |.((~(deg jo:ju args-json) /name so:dejs:format))) ~)
+      (~(deg jo:ju args-json) /name so:dejs:format)
     =/  des=(unit @t)
-      (fall (mole |.((~(deg jo:ju args-json) /desc so:dejs:format))) ~)
+      (~(deg jo:ju args-json) /desc so:dejs:format)
     =/  parameters=(unit (map @t json))
       ?~  param-json=(~(get jo:ju args-json) /parameters)  ~
       ?.  ?=([%o *] u.param-json)  ~
       `p.u.param-json
     =/  required=(unit (list @t))
-      (fall (mole |.((~(deg jo:ju args-json) /required (ar so):dejs:format))) ~)
+      (~(deg jo:ju args-json) /required (ar so):dejs:format)
     =/  thread-builder=(unit @t)
-      (fall (mole |.((~(deg jo:ju args-json) /thread-builder so:dejs:format))) ~)
+      (~(deg jo:ju args-json) /thread-builder so:dejs:format)
     ?~  nam  ~|(%missing-name !!)
     ?~  des  ~|(%missing-desc !!)
     ?~  parameters  ~|(%missing-parameters !!)
@@ -63,9 +63,9 @@
         ~|(%invalid-parameter-definition !!)
       :-  name
       =/  type-text=(unit @t)
-        (fall (mole |.((~(deg jo:ju json) /type so:dejs:format))) ~)
+        (~(deg jo:ju json) /type so:dejs:format)
       =/  desc-text=(unit @t)
-        (fall (mole |.((~(deg jo:ju json) /description so:dejs:format))) ~)
+        (~(deg jo:ju json) /description so:dejs:format)
       ?~  type-text
         ~|(%missing-parameter-type !!)
       ?~  desc-text

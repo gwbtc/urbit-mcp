@@ -28,7 +28,7 @@
   ^-  form:m
   =/  args-json=json  [%o args]
   =/  hoon-text=(unit @t)
-    (fall (mole |.((~(deg jo:ju args-json) /hoon so:dejs:format))) ~)
+    (~(deg jo:ju args-json) /hoon so:dejs:format)
   ?~  hoon-text
     (strand-fail %missing-argument ~)
   ;<    vax=vase

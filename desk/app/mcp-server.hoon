@@ -241,7 +241,7 @@
         ::
             [~ [%s %'resources/read']]
           =/  uri=(unit @t)
-            (fall (mole |.((~(deg jo:ju jon) /params/uri so:dejs:format))) ~)
+            (~(deg jo:ju jon) /params/uri so:dejs:format)
           ?~  uri
             :_  this
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid resource URI' id))
@@ -391,7 +391,7 @@
         ::
             [~ [%s %'prompts/get']]
           =/  prompt-name=(unit @t)
-            (fall (mole |.((~(deg jo:ju jon) /params/name so:dejs:format))) ~)
+            (~(deg jo:ju jon) /params/name so:dejs:format)
           ?~  prompt-name
             :_  this
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid prompt name' id))
@@ -444,7 +444,7 @@
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing JSON RPC request ID' id))
           :_  this
           =/  tool-name=(unit @t)  
-            (fall (mole |.((~(deg jo:ju jon) /params/name so:dejs:format))) ~)
+            (~(deg jo:ju jon) /params/name so:dejs:format)
           ?~  tool-name
             (send-event eyre-id (rpc-error:ml rpc-invalid-params:ml 'Missing or invalid tool name' id))
           =/  tool-results
@@ -535,9 +535,9 @@
         ::
             [%o *]
           =/  type-text=(unit @t)
-            (fall (mole |.((~(deg jo:ju tool-result) /type so:dejs:format))) ~)
+            (~(deg jo:ju tool-result) /type so:dejs:format)
           =/  content-text=(unit @t)
-            (fall (mole |.((~(deg jo:ju tool-result) /text so:dejs:format))) ~)
+            (~(deg jo:ju tool-result) /text so:dejs:format)
           ?~  type-text
             ~
           ?~  content-text

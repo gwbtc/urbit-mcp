@@ -41,7 +41,7 @@
     ^-  form:m
     =/  jon=json  [%o args]
     =/  hoon-text=(unit @t)
-      (fall (mole |.((~(deg jo:ju jon) /hoon so:dejs:format))) ~)
+      (~(deg jo:ju jon) /hoon so:dejs:format)
     ?~  hoon-text
       (strand-fail %missing-argument ~)
     ;<  =beak  bind:m  get-beak:io
