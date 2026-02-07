@@ -6,3 +6,6 @@ dist-dev
 
 # claude
 .claude
+
+# config
+.env
