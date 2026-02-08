@@ -165,6 +165,11 @@
     ?.  authenticated.req
       :_  this
       (send-event eyre-id (internal:error:rpc:ml 'Authentication required' ~))
+    =/  protocol-version=(unit @t)
+      (get-header:http 'mcp-protocol-version' header-list.request.req)
+    ?.  =('2025-06-18' (need protocol-version))
+      :_  this
+      (send-event eyre-id (internal:error:rpc:ml 'Unsupported MCP protocol version' ~))
     =/  lin=request-line:server
       (parse-request-line:server url.request.req)
     ?+  method.request.req
@@ -210,7 +215,7 @@
               :~  ['jsonrpc' s+'2.0']
                   :-  'result'
                   %-  pairs:enjs:format
-                  :~  ['protocolVersion' s+'2024-11-05']
+                  :~  ['protocolVersion' s+'2025-06-18']
                       :-  'capabilities'
                       %-  pairs:enjs:format
                       :~  :-  'tools'
