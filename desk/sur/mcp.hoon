@@ -39,12 +39,44 @@
       =desc
       mime-type=(unit @t)
   ==
+::
 +$  prompt-argument
   $+  mcp-prompt-argument
   $:  =name
-      parameter-type=(unit parameter-type)
       =desc
       required=?
+  ==
+::
++$  prompt-icon
+  $+  mcp-prompt-icon
+  $:  src=@t
+      mime-type=@t
+      sizes=(list @t)
+  ==
+::
++$  prompt-message-type
+  $+  mcp-prompt-message-type
+  $?  %audio
+      %image
+      %resource
+      %text
+  ==
+::
++$  prompt-message-content
+  $+  mcp-prompt-message-content
+  $:  type=@tas
+      text=(unit @t)
+  ==
+::
++$  prompt-messaage-role
+  $+  mcp-prompt-message-role
+  $?  %assistant
+      %user
+  ==
++$  prompt-message
+  $+  mcp-prompt-message
+  $:  role=@tas
+      content=prompt-message-content
   ==
 ::
 +$  prompt
@@ -53,5 +85,7 @@
       title=@t
       =desc
       arguments=(list prompt-argument)
+      icons=(list prompt-icon)
+      messages=(list prompt-message)
   ==
 --

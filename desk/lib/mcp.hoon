@@ -143,6 +143,25 @@
       ==
   ==
 ::
+++  prompt-messages-to-json
+  |=  messages=(list prompt-message:mcp)
+  ^-  json
+  :-  %a
+  %+  turn
+    messages
+  |=  =prompt-message:mcp
+  ^-  json
+  %-  pairs:enjs:format
+  :~  ['role' s+role.prompt-message]
+      :-  'content'
+      %-  pairs:enjs:format
+      :~  ['type' s+type.content.prompt-message]
+          ?~  text.content.prompt-message
+            ['text' s+'']
+          ['text' s+u.text.content.prompt-message]
+      ==
+  ==
+::
 ++  mcp-prompts-to-json
   |=  prompt-set=(set prompt:mcp)
   ^-  json
@@ -164,13 +183,25 @@
           |=  arg=prompt-argument:mcp
           ^-  json
           %-  pairs:enjs:format
-          %+  welp
-            :~  ['name' s+name.arg]
-                ['description' s+desc.arg]
-                ['required' b+required.arg]
-            ==
-          ?~  parameter-type.arg  ~
-          :~  ['type' s+(param-type-to-json u.parameter-type.arg)]
+          :~  ['name' s+name.arg]
+              ['description' s+desc.arg]
+              ['required' b+required.arg]
+          ==
+          :-  'icons'
+          :-  %a
+          %+  turn
+            icons.prompt
+          |=  =prompt-icon:mcp
+          ^-  json
+          %-  pairs:enjs:format
+          :~  ['src' s+src.prompt-icon]
+              ['mimeType' s+mime-type.prompt-icon]
+              :-  'sizes'
+              :-  %a
+              %+  turn
+                sizes.prompt-icon
+              |=  size=@t
+              [%s size]
           ==
       ==
   ==

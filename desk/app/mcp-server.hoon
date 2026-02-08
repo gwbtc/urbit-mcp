@@ -417,24 +417,8 @@
               eyre-id
               %-  result:rpc:ml
               :-  %-  pairs:enjs:format
-                  :~  ['name' s+name.prompt]
-                      ['title' s+title.prompt]
-                      ['description' s+desc.prompt]
-                      :-  'arguments'
-                      :-  %a
-                      %+  turn
-                        arguments.prompt
-                      |=  arg=prompt-argument:mcp
-                      ^-  json
-                      %-  pairs:enjs:format
-                      %+  welp
-                        :~  ['name' s+name.arg]
-                            ['description' s+desc.arg]
-                            ['required' b+required.arg]
-                        ==
-                      ?~  parameter-type.arg  ~
-                      :~  ['type' s+(param-type-to-json:ml u.parameter-type.arg)]
-                      ==
+                  :~  ['description' s+desc.prompt]
+                      ['messages' (prompt-messages-to-json:ml messages.prompt)]
                   ==
               id
           ==
