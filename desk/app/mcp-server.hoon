@@ -41,6 +41,34 @@
         "\0a"
     ==
 ::
+++  send-json
+  |=  [session-id=(unit @ta) eyre-id=@ta =json]
+  ^-  (list card)
+  %+  give-simple-payload:app:server
+    eyre-id
+  ^-  simple-payload:http
+  :-  :-  200
+      %+  welp
+        :~  ['content-type' 'application/json']
+        ==
+      ?~  session-id
+        ~
+      :~  ['mcp-session-id' u.session-id]
+      ==
+    %-  some
+    %-  as-octt:mimes:html
+    (trip (en:json:html json))
+::
+::  XX should return JSON-RPC error if it's the wrong protocol version
+++  current-protocol
+  |=  ver=(unit @t)
+  ^-  (unit @t)
+  ?~  ver
+    ~
+  ?.  =(u.ver '2025-06-18')
+    ~
+  ver
+::
 +$  card  card:agent:gall
 +$  versioned-state
   $:  state-0
@@ -167,13 +195,6 @@
     ?.  authenticated.req
       :_  this
       (send-event eyre-id (internal:error:rpc:ml 'Authentication required' ~))
-    =/  protocol-version=(unit @t)
-      (get-header:http 'mcp-protocol-version' header-list.request.req)
-    ?.  =('2025-06-18' (need protocol-version))
-      :_  this
-      (send-event eyre-id (internal:error:rpc:ml 'Unsupported MCP protocol version' ~))
-    =/  lin=request-line:server
-      (parse-request-line:server url.request.req)
     ?+  method.request.req
       [(simple-response eyre-id 405 ~) this]
     ::
@@ -198,6 +219,10 @@
         |=  jon=json
         =/  id=(unit json)      (~(get jo:jut jon) /id)
         =/  method=(unit json)  (~(get jo:jut jon) /method)
+        =/  protocol-version=(unit @t)
+          %-  current-protocol
+          (get-header:http 'mcp-protocol-version' header-list.request.req)
+        ::
         ?+  method
           :_  this
           (send-event eyre-id (method:error:rpc:ml 'Method not found' id))
@@ -206,51 +231,57 @@
           [(simple-response eyre-id 200 ~) this]
         ::
             [~ [%s %'initialize']]
-          ::  XX check protocol version?
-          ::     would mean we have to declare compat
-          :_  this
-          %:  send-event
-              eyre-id
-              %-  pairs:enjs:format
-              %+  welp
-                ?~(id ~ ['id' u.id]~)
-              :~  ['jsonrpc' s+'2.0']
-                  :-  'result'
-                  %-  pairs:enjs:format
-                  :~  ['protocolVersion' s+'2025-06-18']
-                      :-  'capabilities'
-                      %-  pairs:enjs:format
-                      :~  :-  'tools'
-                          ::  XX change to %.y once we support listChanged notifs
-                          (pairs:enjs:format ~[['listChanged' b+%.n]])
-                          :-  'resources'
-                          (pairs:enjs:format ~[['subscribe' b+%.n] ['listChanged' b+%.n]])
-                          :-  'prompts'
-                          (pairs:enjs:format ~[['listChanged' b+%.n]])
-                      ==
-                      :-  'serverInfo'
-                      %-  pairs:enjs:format
-                      ::  XX specify real or fake in the server name
-                      :~  ['name' s+(crip "{<our.bowl>} urbit mcp server")]
-                          ['version' s+'1.0.0']
-                      ==
-                  ==
-              ==
-          ==
+          =/  =sesh:id:mcp  (scot %uv (shas eyre-id eny.bowl))
+          =/  init-response=json
+            %-  pairs:enjs:format
+            %+  welp
+              ?~(id ~ ['id' u.id]~)
+            :~  ['jsonrpc' s+'2.0']
+                :-  'result'
+                %-  pairs:enjs:format
+                :~  ['protocolVersion' s+'2025-06-18']
+                    :-  'capabilities'
+                    %-  pairs:enjs:format
+                    :~  :-  'tools'
+                        ::  XX change to %.y once we support listChanged notifs
+                        (pairs:enjs:format ~[['listChanged' b+%.n]])
+                        :-  'resources'
+                        (pairs:enjs:format ~[['subscribe' b+%.n] ['listChanged' b+%.n]])
+                        :-  'prompts'
+                        (pairs:enjs:format ~[['listChanged' b+%.n]])
+                    ==
+                    :-  'serverInfo'
+                    %-  pairs:enjs:format
+                    ::  XX specify real or fake in the server name
+                    :~  ['name' s+(crip "{<our.bowl>} urbit mcp server")]
+                        ['version' s+'1.0.0']
+                    ==
+                ==
+            ==
+          :_  this(sessions (~(put by sessions) our.bowl (~(put by (~(gut by sessions) our.bowl ~)) sesh ~)))
+          (send-json `sesh eyre-id init-response)
         ::
             [~ [%s %'tools/list']]
+          ?~  protocol-version
+            [(simple-response eyre-id 400 ~) this]
           :_  this
           (send-event eyre-id (result:rpc:ml (mcp-tools-to-json:ml tools) id))
         ::
             [~ [%s %'resources/list']]
+          ?~  protocol-version
+            [(simple-response eyre-id 400 ~) this]
           :_  this
           (send-event eyre-id (result:rpc:ml (mcp-resources-to-json:ml resources) id))
         ::
             [~ [%s %'prompts/list']]
+          ?~  protocol-version
+            [(simple-response eyre-id 400 ~) this]
           :_  this
           (send-event eyre-id (result:rpc:ml (mcp-prompts-to-json:ml prompts) id))
         ::
             [~ [%s %'resources/read']]
+          ?~  protocol-version
+            [(simple-response eyre-id 400 ~) this]
           =/  uri=(unit @t)
             (~(deg jo:jut jon) /params/uri so:dejs:format)
           ?~  uri
@@ -399,6 +430,8 @@
           ==
         ::
             [~ [%s %'prompts/get']]
+          ?~  protocol-version
+            [(simple-response eyre-id 400 ~) this]
           =/  prompt-name=(unit @t)
             (~(deg jo:jut jon) /params/name so:dejs:format)
           ?~  prompt-name
@@ -431,6 +464,8 @@
           ==
         ::
             [~ [%s %'tools/call']]
+          ?~  protocol-version
+            [(simple-response eyre-id 400 ~) this]
           =/  rpc-id=(unit @ud)  (bind id ni:dejs:format)
           ?~  rpc-id
             :_  this
