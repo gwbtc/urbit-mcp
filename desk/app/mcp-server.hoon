@@ -59,6 +59,19 @@
     %-  as-octt:mimes:html
     (trip (en:json:html json))
 ::
+++  send-json-error
+  |=  [status=@ud eyre-id=@ta =json]
+  ^-  (list card)
+  %+  give-simple-payload:app:server
+    eyre-id
+  ^-  simple-payload:http
+  :-  :-  status
+      :~  ['content-type' 'application/json']
+      ==
+    %-  some
+    %-  as-octt:mimes:html
+    (trip (en:json:html json))
+::
 ::  XX should return JSON-RPC error if it's the wrong protocol version
 ++  current-protocol
   |=  ver=(unit @t)
@@ -214,7 +227,8 @@
         =/  parsed=(unit json)
           (de:json:html q:(need body.request.req))
         ?~  parsed
-          [(simple-response eyre-id 400 ~) this]
+          :_  this
+          (send-json-error 400 eyre-id (parse:error:rpc:ml 'Invalid JSON' ~))
         %.  u.parsed
         |=  jon=json
         =/  id=(unit json)      (~(get jo:jut jon) /id)
@@ -222,13 +236,17 @@
         =/  protocol-version=(unit @t)
           %-  current-protocol
           (get-header:http 'mcp-protocol-version' header-list.request.req)
+        =/  is-notification=?  ?=(~ id)
         ::
         ?+  method
           :_  this
           (send-event eyre-id (method:error:rpc:ml 'Method not found' id))
         ::
             [~ [%s %'notifications/initialized']]
-          [(simple-response eyre-id 200 ~) this]
+          ?:  is-notification
+            [(simple-response eyre-id 202 ~) this]
+          :_  this
+          (send-event eyre-id (method:error:rpc:ml 'Notifications must not include id field' id))
         ::
             [~ [%s %'initialize']]
           =/  =sesh:id:mcp  (scot %uv (shas eyre-id eny.bowl))
