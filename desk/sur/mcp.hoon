@@ -1,5 +1,18 @@
 /-  spider
 |%
+::
+::  session management
+++  id
+  |%
+  +$  conn  @ta  ::  http connection
+  +$  last  @ta  ::  last sent event
+  +$  sesh  @ta  ::  mcp session id
+  --
+::
++$  sessions
+  $+  mcp-sessions
+  (map ship (map sesh:id (map last:id (unit conn:id))))
+::
 ++  tool
   =<  tool
   |%

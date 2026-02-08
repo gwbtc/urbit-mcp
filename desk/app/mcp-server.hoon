@@ -47,6 +47,7 @@
   ==
 +$  state-0
   $:  %0
+      =sessions:mcp
       tools=(set tool:mcp)
       resources=(set resource:mcp)
       prompts=(set prompt:mcp)
@@ -99,6 +100,7 @@
           ==
       ==
   %=  this
+    sessions   *sessions:mcp
     tools      (sy default-tools)
     resources  %-  sy
                ^-  (list resource:mcp)
