@@ -18,30 +18,30 @@
         ['thread-builder' [%string 'A Hoon gate $-((map @t json) ,vase).']]
     ==
     ~['name' 'desc' 'parameters' 'required' 'thread-builder']
-    ^-  thread-builder:mcp
+    ^-  thread-builder:tool:mcp
     |=  args=(map @t json)
     ^-  shed:khan
     =/  m  (strand:spider ,vase)
     ^-  form:m
-    =/  args-json=json  [%o args]
-    =/  nam=(unit @t)
-      (~(deg jo:jut args-json) /name so:dejs:format)
-    =/  des=(unit @t)
-      (~(deg jo:jut args-json) /desc so:dejs:format)
-    =/  parameters=(unit (map @t json))
-      ?~  param-json=(~(get jo:jut args-json) /parameters)  ~
-      ?.  ?=([%o *] u.param-json)  ~
-      `p.u.param-json
-    =/  required=(unit (list @t))
-      (~(deg jo:jut args-json) /required (ar so):dejs:format)
-    =/  thread-builder=(unit @t)
-      (~(deg jo:jut args-json) /thread-builder so:dejs:format)
+    =/  args-json=json
+      [%o args]
+    =/  nam=(unit @t)         (~(deg jo:jut args-json) /name so:dejs:format)
+    =/  des=(unit @t)         (~(deg jo:jut args-json) /desc so:dejs:format)
+    =/  req=(unit (list @t))  (~(deg jo:jut args-json) /required (ar so):dejs:format)
+    =/  ted=(unit @t)         (~(deg jo:jut args-json) /thread-builder so:dejs:format)
     ?~  nam  ~|(%missing-name !!)
     ?~  des  ~|(%missing-desc !!)
-    ?~  parameters  ~|(%missing-parameters !!)
-    ?~  required  ~|(%missing-required !!)
-    ?~  thread-builder  ~|(%missing-thread-builder !!)
-    =/  req=(list @t)  u.required
+    ?~  req  ~|(%missing-required !!)
+    ?~  ted  ~|(%missing-thread-builder !!)
+    =/  parameters=(unit (map @t json))
+      ?~  param-json=(~(get jo:jut args-json) /parameters)
+        ~
+      ?.  ?=([%o *] u.param-json)
+        ~
+      `p.u.param-json
+    ?~  parameters
+      ~|(%missing-parameters !!)
+    ::
     ;<  =beak  bind:m  get-beak:io
     =/  bez=(list beam)
       :~  [beak /sur/mcp/hoon]
@@ -52,32 +52,30 @@
       ==
     ;<    vax=vase
         bind:m
-      (eval-hoon:io (ream u.thread-builder) bez)
-    =/  par=(map name:mcp parameter-def:mcp)
-      %-  ~(gas by *(map name:mcp parameter-def:mcp))
+      (eval-hoon:io (ream u.ted) bez)
+    =/  par=(map name:parameter:tool:mcp def:parameter:tool:mcp)
+      %-  ~(gas by *(map name:parameter:tool:mcp def:parameter:tool:mcp))
       %+  turn
         ~(tap by u.parameters)
       |=  [name=@t =json]
-      ^-  [name:mcp parameter-def:mcp]
+      ^-  [name:parameter:tool:mcp def:parameter:tool:mcp]
       ?.  ?=([%o *] json)
         ~|(%invalid-parameter-definition !!)
+      =/  typ=(unit @t)  (~(deg jo:jut json) /type so:dejs:format)
+      =/  dec=(unit @t)  (~(deg jo:jut json) /description so:dejs:format)
       :-  name
-      =/  type-text=(unit @t)
-        (~(deg jo:jut json) /type so:dejs:format)
-      =/  desc-text=(unit @t)
-        (~(deg jo:jut json) /description so:dejs:format)
-      ?~  type-text
+      ?~  typ
         ~|(%missing-parameter-type !!)
-      ?~  desc-text
+      ?~  dec
         ~|(%missing-parameter-description !!)
-      [(parameter-type:mcp u.type-text) u.desc-text]
+      [(type:parameter:tool:mcp u.typ) u.dec]
     ;<  our=ship  bind:m  get-our:io
     ;<  ~  bind:m
       %-  send-raw-card:io
       :*  %pass   /add-tool
           %agent  [our %mcp-server]
-          %poke  %add-mcp-tool
-          !>([u.nam u.des par req !<(thread-builder:mcp vax)])
+          %poke   %add-mcp-tool
+          !>([u.nam u.des par u.req !<(thread-builder:tool:mcp vax)])
       ==
     ;<  ~  bind:m  (take-poke-ack:io /add-tool)
     %-  pure:m

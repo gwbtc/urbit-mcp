@@ -21,7 +21,7 @@
       '''
   ==
   ['hoon']~
-  ^-  thread-builder:mcp
+  ^-  thread-builder:tool:mcp
   |=  args=(map @t json)
   ^-  shed:khan
   =/  m  (strand:spider ,vase)

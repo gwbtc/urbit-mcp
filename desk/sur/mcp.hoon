@@ -1,91 +1,105 @@
 /-  spider
-/+  strandio
 |%
-+$  name  @t
-+$  desc  @t
+++  tool
+  =<  tool
+  |%
+  +$  tool
+    $+  mcp-tool
+    $:  name=@t
+        desc=@t
+        parameters=(map name:parameter def:parameter)
+        required=(list name:parameter)
+        =thread-builder
+    ==
+  ::
+  +$  thread-builder
+    $+  mcp-thread-builder
+    $-((map @t json) _*form:(strand:spider ,vase))
+  ::
+  ++  parameter
+    |%
+    +$  name  @t
+    ::
+    +$  type
+      $+  mcp-parameter-type
+      $?  %array
+          %boolean
+          %number
+          %object
+          %string
+      ==
+    ::
+    +$  def
+      $+  mcp-parameter-definition
+      $:  =type
+          desc=@t
+      ==
+    --
+  --
 ::
-+$  parameter-type
-  $+  mcp-parameter-type
-  $?  %array
-      %boolean
-      %number
-      %object
-      %string
-  ==
+++  resource
+  =<  resource
+  |%
+  +$  resource
+    $+  mcp-resource
+    $:  uri=@t
+        name=@t
+        desc=@t
+        mime-type=(unit @t)
+    ==
+  --
 ::
-+$  parameter-def
-  $+  mcp-parameter-definition
-  $:  =parameter-type
-      =desc
-  ==
-::
-+$  thread-builder
-  $+  mcp-thread-builder
-  $-((map @t json) _*form:(strand:spider ,vase))
-::
-+$  tool
-  $+  mcp-tool
-  $:  =name
-      =desc
-      parameters=(map name parameter-def)
-      required=(list @t)
-      =thread-builder
-  ==
-::
-+$  resource
-  $+  mcp-resource
-  $:  uri=@t
-      =name
-      =desc
-      mime-type=(unit @t)
-  ==
-::
-+$  prompt-argument
-  $+  mcp-prompt-argument
-  $:  =name
-      =desc
-      required=?
-  ==
-::
-+$  prompt-icon
-  $+  mcp-prompt-icon
-  $:  src=@t
-      mime-type=@t
-      sizes=(list @t)
-  ==
-::
-+$  prompt-message-type
-  $+  mcp-prompt-message-type
-  $?  %audio
-      %image
-      %resource
-      %text
-  ==
-::
-+$  prompt-message-content
-  $+  mcp-prompt-message-content
-  $:  type=@tas
-      text=(unit @t)
-  ==
-::
-+$  prompt-messaage-role
-  $+  mcp-prompt-message-role
-  $?  %assistant
-      %user
-  ==
-+$  prompt-message
-  $+  mcp-prompt-message
-  $:  role=@tas
-      content=prompt-message-content
-  ==
-::
-+$  prompt
-  $+  mcp-prompt
-  $:  =name
-      title=@t
-      =desc
-      arguments=(list prompt-argument)
-      icons=(list prompt-icon)
-      messages=(list prompt-message)
-  ==
+++  prompt
+  =<  prompt
+  |%
+  +$  prompt
+    $+  mcp-prompt
+    $:  name=@t
+        title=@t
+        desc=@t
+        arguments=(list argument)
+        icons=(list icon)
+        messages=(list message)
+    ==
+  ::
+  +$  argument
+    $+  mcp-prompt-argument
+    $:  name=@t
+        desc=@t
+        required=?
+    ==
+  ::
+  +$  icon
+    $+  mcp-prompt-icon
+    $:  src=@t
+        mime-type=@t
+        sizes=(list @t)
+    ==
+  ::
+  +$  message
+    $+  mcp-prompt-message
+    $:  =role
+        =content
+    ==
+  ::
+  +$  role
+    $?  %assistant
+        %user
+    ==
+  ::
+  ::  XX support audio, image, resource
+  +$  content
+    $+  mcp-prompt-message-content
+    $:  =type
+        text=(unit @t)
+    ==
+  ::
+  +$  type
+    $+  mcp-prompt-message-content-type
+    $?  %audio
+        %image
+        %resource
+        %text
+    ==
+  --
 --

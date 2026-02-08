@@ -79,17 +79,6 @@
       ==
   ==
 ::
-++  param-type-to-json
-  |=  type=parameter-type:mcp
-  ^-  @t
-  ?-  type
-    %string   'string'
-    %number   'number'
-    %boolean  'boolean'
-    %array    'array'
-    %object   'object'
-  ==
-::
 ++  mcp-tools-to-json
   |=  tool-set=(set tool:mcp)
   ^-  json
@@ -102,10 +91,10 @@
       ^-  json
       =/  properties=(map @t json)
         %-  ~(run by parameters.tool)
-        |=  param=parameter-def:mcp
+        |=  =def:parameter:tool:mcp
         %-  pairs:enjs:format
-        :~  ['type' s+(param-type-to-json parameter-type.param)]
-            ['description' s+desc.param]
+        :~  ['type' s+(@t type.def)]
+            ['description' s+desc.def]
         ==
       ::  Convert required list to JSON array
       =/  required-array=(list json)
@@ -144,21 +133,21 @@
   ==
 ::
 ++  prompt-messages-to-json
-  |=  messages=(list prompt-message:mcp)
+  |=  messages=(list message:prompt:mcp)
   ^-  json
   :-  %a
   %+  turn
     messages
-  |=  =prompt-message:mcp
+  |=  =message:prompt:mcp
   ^-  json
   %-  pairs:enjs:format
-  :~  ['role' s+role.prompt-message]
+  :~  ['role' s+role.message]
       :-  'content'
       %-  pairs:enjs:format
-      :~  ['type' s+type.content.prompt-message]
-          ?~  text.content.prompt-message
+      :~  ['type' s+type.content.message]
+          ?~  text.content.message
             ['text' s+'']
-          ['text' s+u.text.content.prompt-message]
+          ['text' s+u.text.content.message]
       ==
   ==
 ::
@@ -180,7 +169,7 @@
           :-  %a
           %+  turn
             arguments.prompt
-          |=  arg=prompt-argument:mcp
+          |=  arg=argument:prompt:mcp
           ^-  json
           %-  pairs:enjs:format
           :~  ['name' s+name.arg]
@@ -191,15 +180,15 @@
           :-  %a
           %+  turn
             icons.prompt
-          |=  =prompt-icon:mcp
+          |=  =icon:prompt:mcp
           ^-  json
           %-  pairs:enjs:format
-          :~  ['src' s+src.prompt-icon]
-              ['mimeType' s+mime-type.prompt-icon]
+          :~  ['src' s+src.icon]
+              ['mimeType' s+mime-type.icon]
               :-  'sizes'
               :-  %a
               %+  turn
-                sizes.prompt-icon
+                sizes.icon
               |=  size=@t
               [%s size]
           ==

@@ -13,7 +13,7 @@
     '''
     (my ['desk' [%string (crip "desk name (e.g. 'base' to commit the %base desk)")]]~)
     ['desk']~
-    ^-  thread-builder:mcp
+    ^-  thread-builder:tool:mcp
     =>
     |%
     ++  print-tang-to-wain

@@ -5,7 +5,7 @@
   'Get the Urbit ID (@p) of this ship.'
   ~
   ~
-  ^-  thread-builder:mcp
+  ^-  thread-builder:tool:mcp
   |=  *
   =/  m  (strand:spider ,vase)
   ^-  form:m

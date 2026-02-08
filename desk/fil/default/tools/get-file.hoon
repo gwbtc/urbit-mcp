@@ -29,7 +29,7 @@
       ['path' [%string 'The remaining filepath.']]
   ==
   ~['path']
-  ^-  thread-builder:mcp
+  ^-  thread-builder:tool:mcp
   |=  args=(map @t json)
   =/  m  (strand:spider ,vase)
   ^-  form:m
