@@ -28,16 +28,17 @@
     ?~  hoon-text
       (strand-fail %missing-argument ~)
     ;<  =beak  bind:m  get-beak:io
-    =/  bez=(list beam)
-      :~  [beak /sur/mcp/hoon]
-          [beak /lib/strand/hoon]
-          [beak /sur/spider/hoon]
-          [beak /lib/strandio/hoon]
-          [beak /lib/json-utils/hoon]
-      ==
-    ;<    vax=vase
-        bind:m
-      (eval-hoon:io (ream u.hoon-text) bez)
+    =/  vax=vase
+      %+  slap
+        !>  :*  mcp=mcp
+                spider=spider
+                strand=strand:spider
+                io=io
+                jut=jut
+                strand-fail=strand-fail:strand:spider
+                ..zuse
+            ==
+      (ream u.hoon-text)
     =/  =thread-builder:tool:mcp  !<(thread-builder:tool:mcp vax)
     %-  pure:m
     !>  ^-  json

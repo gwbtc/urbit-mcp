@@ -41,16 +41,6 @@
       ~|(%missing-parameters !!)
     ::
     ;<  =beak  bind:m  get-beak:io
-    =/  bez=(list beam)
-      :~  [beak /sur/mcp/hoon]
-          [beak /sur/spider/hoon]
-          [beak /lib/strand/hoon]
-          [beak /lib/strandio/hoon]
-          [beak /lib/json-utils/hoon]
-      ==
-    ;<    vax=vase
-        bind:m
-      (eval-hoon:io (ream u.ted) bez)
     =/  par=(map name:parameter:tool:mcp def:parameter:tool:mcp)
       %-  ~(gas by *(map name:parameter:tool:mcp def:parameter:tool:mcp))
       %+  turn
@@ -68,6 +58,17 @@
         ~|(%missing-parameter-description !!)
       [(type:parameter:tool:mcp u.typ) u.dec]
     ;<  our=ship  bind:m  get-our:io
+    =/  vax=vase
+      %+  slap
+        !>  :*  mcp=mcp
+                spider=spider
+                strand=strand:spider
+                io=io
+                jut=jut
+                strand-fail=strand-fail:strand:spider
+                ..zuse
+            ==
+      (ream u.ted)
     ;<  ~  bind:m
       %-  send-raw-card:io
       :*  %pass   /add-tool
