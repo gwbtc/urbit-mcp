@@ -4,9 +4,7 @@
 ^-  tool:mcp
 :*  'eval-thread-builder'
     '''
-    Evaluate a string of Hoon code to check if it's a valid $thread-builder:tool:mcp.
-    A $thread-builder is a Hoon gate which takes a (map @t json) and returns $shed:khan.
-    Use this to test the body of a new MCP tool before adding it to the %mcp-server.
+    Check if a Hoon string is a valid $thread-builder:mcp.
     '''
     %-  my
     :~  :-  'hoon'

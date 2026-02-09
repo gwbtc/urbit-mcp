@@ -5,8 +5,6 @@
 :*  'add-mcp-tool'
     '''
     Add a new MCP Tool to the %mcp-server agent state.
-    Before you add this tool, you MUST use the eval-thread-builder tool to check the business logic of your tool is correct.
-    Your MCP Resources include source code for the default Urbit MCP Tools. You SHOULD look at those as relevant examples.
     '''
     %-  my
     :~  ['name' [%string 'The name of your MCP tool.']]

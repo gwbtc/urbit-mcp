@@ -4,12 +4,6 @@
 :*  'commit-desk'
     '''
     Commit code changes to a desk.
-    If this errors with a timeout, there are no changes to commit.
-    If you're in a source repo in the Unix filesystem, you must copy the files
-    from there to this desk's folder in Unix using whichever means are appropriate.
-    Consult your CLAUDE.md file for build commands. If there's just one 'desk'
-    folder in your source repo, you can probably just `cp -r ./desk/* path/to/desk`
-    and then run this commit tool.
     '''
     (my ['desk' [%string (crip "desk name (e.g. 'base' to commit the %base desk)")]]~)
     ['desk']~

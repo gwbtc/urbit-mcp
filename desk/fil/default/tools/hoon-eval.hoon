@@ -2,22 +2,15 @@
 /+  io=strandio, jut=json-utils
 =,  strand-fail=strand-fail:strand:spider
 ^-  tool:mcp
-:*  'hoon-eval'
+:*  'eval-hoon'
   '''
-  Evaluate arbitrary Hoon to test for correctness.
-  Will not return the result of the Hoon expression.
+  Check correctness of a Hoon string.
   '''
   %-  my
   :~  :-  'hoon'
       :-  %string
       '''
       Any Hoon expression, such as `(add 2 2)`.
-      Note: this Hoon will be run against the Arvo kernel itself.
-      That means you'll need to import your own dependencies (e.g. strandio).
-      If successful, this tool will return your Hoon string.
-      If unsuccessful, this tool will return an error message and a stack trace.
-      The error message will pertain to your code.
-      The stack trace will point to the tool definition itself, not your code.
       '''
   ==
   ['hoon']~

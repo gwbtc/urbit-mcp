@@ -19,8 +19,7 @@
 ^-  tool:mcp
 :*  'get-file'
   '''
-  Fetch the text of a file from Clay, whether local or remote.
-  Must not be a directory.
+  Fetch a Clay file (local or remote)
   '''
   %-  my
   :~  ['ship' [%string 'The Urbit ID of the ship this file is on. (Default: our ship.)']]
