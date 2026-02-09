@@ -7,6 +7,10 @@
     ~
     :~  :-  %user
         :-  %text
-        `'What is the Urbit ID (@p) of this ship? Please return our ship\'s identity.'
+        %-  some
+        '''
+        What is the Urbit ID (@p) of this ship?
+        Please return our ship's identity.
+        '''
     ==
 ==
