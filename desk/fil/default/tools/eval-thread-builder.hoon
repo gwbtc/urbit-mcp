@@ -10,26 +10,10 @@
     :~  :-  'hoon'
         :-  %string
         '''
-        String of Hoon code that should be a $-((map @t json) shed:khan).
-        The simplest valid string is |=(* ^-(shed:khan =/(m (strand:spider ,vase) (pure:m !>(%success))))).
-        Look at the Urbit MCP Tool examples linked in your MCP Resources for examples of working thread-builders.
-        Note that those example tools have namespaced dependencies in ways your tool cannot.
-        Your $thread-builder gate will be built against a Hoon subject with some dependencies:
-          - /sur/mcp/hoon        - %mcp-server types
-          - /sur/spider/hoon     - thread types
-          - /lib/strand/hoon     - thread utilities library
-          - /lib/strandio/hoon   - threads library
-          - /lib/json-utils/hoon - json object parsing library
-        You can access arms and types in your $thread-builder code as follows:
-          - foo:mcp         (no alias in examples)
-          - foo:spider      (no alias in examples)
-          - foo:strand      (foo:libstrand in examples)
-          - foo:strandio    (foo:io in examples)
-          - foo:json-utils  (foo:jut in examples)
-        If successful, this tool will return a success message.
-        If unsuccessful, this tool will return an error message and a stack trace.
-        The error message will pertain to your code.
-        The stack trace will point to this tool definition file, not your code.
+        String of Hoon code that should be a $-((map @t json) shed:khan), which must return MCP-compliant JSON..
+        The simplest valid string is |=(* ^-(shed:khan =/(m (strand:spider ,vase) (pure:m !>((pairs:enjs:format ~[['type' s+'text'] ['text' s+'Success!']])))))).
+        If you have an eval-thread-builder skill, consult that in full for important information about dependencies.
+        The way dependencies are imported in the default tools is not the way you'll have to do it.
         '''
     ==
     ['hoon']~
