@@ -1,6 +1,7 @@
 imports:
   base-dev: ./dist
   pkg-arvo: ./dist
+  tlon-lib: ./dist
 
 git module pkg-arvo:
   url:    https://github.com/urbit/urbit
@@ -9,6 +10,14 @@ git module pkg-arvo:
   pick:
     - pkg/arvo/lib/pretty-file.hoon
   rev: 41dd3b5f7c554ac615d0db9eaa5fe46071d47bc8
+
+git module tlon-lib:
+  url:    https://github.com/tloncorp/tlon-apps
+  reup:   master
+  export: desk
+  pick:
+    - desk/lib/test-agent.hoon
+  rev: 9f0c94771e4773567a2f55a727ffa31b0f6e8e9f
 
 git module base-dev:
   url:    https://github.com/urbit/urbit
@@ -21,6 +30,7 @@ git module base-dev:
     - pkg/base-dev/lib/skeleton.hoon
     - pkg/base-dev/lib/strand.hoon
     - pkg/base-dev/lib/strandio.hoon
+    - pkg/base-dev/lib/test.hoon
     - pkg/base-dev/lib/verb.hoon
     - pkg/base-dev/mar/bill.hoon
     - pkg/base-dev/mar/kelvin.hoon
