@@ -82,6 +82,19 @@
     ~
   ver
 ::
+++  check-session-id
+  |=  [=ship session-id=(unit @t) =sessions:mcp]
+  ^-  (unit @t)
+  ?~  session-id
+    ~
+  =/  ship-sessions
+    (~(get by sessions) ship)
+  ?~  ship-sessions
+    ~
+  ?.  (~(has by u.ship-sessions) u.session-id)
+    ~
+  session-id
+::
 +$  card  card:agent:gall
 +$  versioned-state
   $:  state-0
@@ -208,8 +221,30 @@
     ?.  authenticated.req
       :_  this
       (send-event eyre-id (internal:error:rpc:ml 'Authentication required' ~))
+    =/  session-id=(unit @t)
+      (get-header:http 'mcp-session-id' header-list.request.req)
+    =/  valid-session-id=(unit @t)
+      %:  check-session-id
+          src.bowl
+          session-id
+          sessions
+      ==
     ?+  method.request.req
       [(simple-response eyre-id 405 ~) this]
+    ::
+        %'DELETE'
+      ?~  valid-session-id
+        [(simple-response eyre-id 400 ~) this]
+      =/  ship-sessions=(unit (map sesh:id:mcp (map last:id:mcp (unit conn:id:mcp))))
+        (~(get by sessions) src.bowl)
+      ?~  ship-sessions
+        [(simple-response eyre-id 400 ~) this]
+      ?.  (~(has by u.ship-sessions) u.valid-session-id)
+        [(simple-response eyre-id 404 ~) this]
+      :-  (simple-response eyre-id 200 ~)
+      %=  this
+        sessions  (~(put by sessions) [src.bowl (~(del by u.ship-sessions) u.valid-session-id)])
+      ==
     ::
         %'GET'
       =/  connection-json=json
@@ -280,24 +315,32 @@
           (send-json `sesh eyre-id init-response)
         ::
             [~ [%s %'tools/list']]
+          ?~  valid-session-id
+            [(simple-response eyre-id 400 ~) this]
           ?~  protocol-version
             [(simple-response eyre-id 400 ~) this]
           :_  this
           (send-event eyre-id (result:rpc:ml (mcp-tools-to-json:ml tools) id))
         ::
             [~ [%s %'resources/list']]
+          ?~  valid-session-id
+            [(simple-response eyre-id 400 ~) this]
           ?~  protocol-version
             [(simple-response eyre-id 400 ~) this]
           :_  this
           (send-event eyre-id (result:rpc:ml (mcp-resources-to-json:ml resources) id))
         ::
             [~ [%s %'prompts/list']]
+          ?~  valid-session-id
+            [(simple-response eyre-id 400 ~) this]
           ?~  protocol-version
             [(simple-response eyre-id 400 ~) this]
           :_  this
           (send-event eyre-id (result:rpc:ml (mcp-prompts-to-json:ml prompts) id))
         ::
             [~ [%s %'resources/read']]
+          ?~  valid-session-id
+            [(simple-response eyre-id 400 ~) this]
           ?~  protocol-version
             [(simple-response eyre-id 400 ~) this]
           =/  uri=(unit @t)
@@ -448,6 +491,8 @@
           ==
         ::
             [~ [%s %'prompts/get']]
+          ?~  valid-session-id
+            [(simple-response eyre-id 400 ~) this]
           ?~  protocol-version
             [(simple-response eyre-id 400 ~) this]
           =/  prompt-name=(unit @t)
@@ -482,6 +527,8 @@
           ==
         ::
             [~ [%s %'tools/call']]
+          ?~  valid-session-id
+            [(simple-response eyre-id 400 ~) this]
           ?~  protocol-version
             [(simple-response eyre-id 400 ~) this]
           =/  rpc-id=(unit @ud)  (bind id ni:dejs:format)
