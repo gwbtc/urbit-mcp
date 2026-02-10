@@ -7,12 +7,13 @@
     You can also nuke an entire desk.
     '''
     %-  my
-    :-  'agent'
-    :-  %string
-    '''
-    Agent to nuke (e.g. 'graph-store' to nuke %graph-store).
-    '''
-    ~['agent']
+    :~  :-  'agent'
+        :-  %string
+        '''
+        Gall agent to nuke (e.g. 'graph-store' to nuke %graph-store).
+        '''
+    ==
+    ['agent']~
     ^-  thread-builder:tool:mcp
     |=  args=(map @t json)
     ^-  shed:khan
@@ -30,6 +31,6 @@
     !>  ^-  json
     %-  pairs:enjs:format
     :~  ['type' s+'text']
-        ['text' s+(crip "Agent %{(trip u.agent-name)} nuked")]
+        ['text' s+(crip "Nuked %{(trip u.agent-name)}")]
     ==
 ==

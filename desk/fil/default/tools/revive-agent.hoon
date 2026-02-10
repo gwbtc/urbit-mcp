@@ -7,12 +7,13 @@
     You can also revive an entire desk.
     '''
     %-  my
-    :-  'agent'
-    :-  %string
-    '''
-    Desk name to revive (e.g. 'hark' to revive %hark).
-    '''
-    ~['desk']
+    :~  :-  'agent'
+        :-  %string
+        '''
+        Desk name to revive (e.g. 'hark' to revive %hark).
+        '''
+    ==
+    ['agent']~
     ^-  thread-builder:tool:mcp
     |=  args=(map @t json)
     ^-  shed:khan
@@ -20,12 +21,11 @@
     ^-  form:m
     =/  args-json=json  [%o args]
     =/  agent-name=(unit @t)
-      (~(deg jo:jut args-json) /desk so:dejs:format)
+      (~(deg jo:jut args-json) /agent so:dejs:format)
     ?~  agent-name  ~|(%missing-agent !!)
-    =/  desk=@tas  (@tas u.agent-name)
     ;<  our=@p  bind:m  get-our:io
     ;<  ~  bind:m
-      (poke:io [our %hood] %kiln-revive !>(desk))
+      (poke:io [our %hood] %kiln-revive !>((@tas u.agent-name)))
     %-  pure:m
     !>  ^-  json
     %-  pairs:enjs:format
