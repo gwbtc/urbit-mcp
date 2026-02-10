@@ -4,4 +4,5 @@
     'Strandio Documentation'
     'Urbit Docs /lib/strandio.hoon reference'
     `'text/markdown'
+    `[~['agent'] ~ ~]
 ==

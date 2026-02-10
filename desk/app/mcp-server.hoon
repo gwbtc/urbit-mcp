@@ -117,6 +117,7 @@
                      (crip "Urbit MCP tool {<name.tool>}")
                      (crip "Source code for Urbit MCP tool {<name.tool>}")
                      `'text/hoon'
+                     `[~['agent'] ~ ~]
                  ==
                ::  add default resources
                %+  murn

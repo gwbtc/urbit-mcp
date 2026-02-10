@@ -4,4 +4,5 @@
     'Strandio Source Code'
     'Raw Hoon code for the strandio library'
     `'text/plain'
+    `[~['agent'] ~ ~]
 ==

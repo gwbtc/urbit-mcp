@@ -46,6 +46,14 @@
         name=@t
         desc=@t
         mime-type=(unit @t)
+        annotations=(unit annotations)
+    ==
+  ::
+  +$  annotations
+    $+  mcp-resource-annotations
+    $:  audience=(list @t)
+        priority=(unit @rs)
+        last-modified=(unit @t)
     ==
   --
 ::

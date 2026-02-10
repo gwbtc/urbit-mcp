@@ -4,4 +4,5 @@
     'Strand Source Code'
     'Raw Hoon code for the Urbit thread type definition'
     `'text/plain'
+    `[~['agent'] ~ ~]
 ==

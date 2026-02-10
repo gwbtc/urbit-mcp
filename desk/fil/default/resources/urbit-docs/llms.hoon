@@ -4,4 +4,5 @@
     'Urbit Docs llms.txt'
     'docs.urbit.org table of contents'
     `'text/markdown'
+    `[~['agent'] ~ ~]
 ==
