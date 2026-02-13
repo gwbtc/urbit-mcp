@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, jut=json-utils, pf=pretty-file
+/+  io=strandio, pf=pretty-file
 =,  strand-fail=strand-fail:strand:spider
 =>
 |%
@@ -29,43 +29,55 @@
   ==
   ~['path']
   ^-  thread-builder:tool:mcp
-  |=  args=(map @t json)
+  |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
   =/  m  (strand:spider ,vase)
   ^-  form:m
   ;<    =bowl:rand
       bind:m
     get-bowl:io
-  =/  jon=json  [%o args]
-  =/  pax=(unit path)  (~(deg jo:jut jon) /path pa:dejs:format)
+  =/  pax=(unit argument:tool:mcp)  (~(get by args) 'path')
   ?~  pax
     (strand-fail %no-path ~)
-  =/  her=(unit ship)   (~(deg jo:jut jon) /ship (se %p):dejs:format)
-  =/  dek=(unit desk)   (~(deg jo:jut jon) /desk (se %tas):dejs:format)
-  =/  cast=(unit tape)  (~(deg jo:jut jon) /case sa:dejs:format)
+  ?>  ?=([%string @t] u.pax)
+  =/  path-list=(unit path)  
+    (rush p.u.pax ;~(pfix fas (more fas sym)))
+  ?~  path-list
+    (strand-fail %invalid-path ~)
+  =/  her=(unit argument:tool:mcp)   (~(get by args) 'ship')
+  =/  dek=(unit argument:tool:mcp)   (~(get by args) 'desk')  
+  =/  cast=(unit argument:tool:mcp)  (~(get by args) 'case')
+  =/  ship-p=(unit @p)
+    ?~  her  ~
+    ?>  ?=([%string @t] u.her)
+    (rush p.u.her ;~(pfix sig fed:ag))
+  =/  desk-tas=(unit @tas)
+    ?~  dek  ~
+    ?>  ?=([%string @t] u.dek)
+    `(@tas p.u.dek)
   =/  cuse=(unit case)
     ?~  cast
       `da+now.bowl
-    ?+  (@tas -.p:(scan u.cast nuck:so))
+    ?>  ?=([%string @t] u.cast)
+    ?+  (@tas -.p:(scan (trip p.u.cast) nuck:so))
       ~
     ::
         %da
-      `[%da (@da +.p:(scan u.cast nuck:so))]
+      `[%da (@da +.p:(scan (trip p.u.cast) nuck:so))]
     ::
         %ud
-      `[%ud (@ud +.p:(scan u.cast nuck:so))]
+      `[%ud (@ud +.p:(scan (trip p.u.cast) nuck:so))]
     ::
         %uv
-      `[%uv (@uv +.p:(scan u.cast nuck:so))]
+      `[%uv (@uv +.p:(scan (trip p.u.cast) nuck:so))]
     ==
   ;<  =riot:clay  bind:m
     %:  warp:io
-        (fall her our.bowl)
-        (fall dek %base)
+        (fall ship-p our.bowl)
+        (fall desk-tas %base)
         ~
-        %sing
-        %x
+        %sing  %x
         (fall cuse da+now.bowl)
-        u.pax
+        u.path-list
     ==
   %-  pure:m
   !>  ^-  json

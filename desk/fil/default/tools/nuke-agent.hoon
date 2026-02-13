@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, jut=json-utils
+/+  io=strandio
 ^-  tool:mcp
 :*  'nuke-agent'
     '''
@@ -15,22 +15,20 @@
     ==
     ['agent']~
     ^-  thread-builder:tool:mcp
-    |=  args=(map @t json)
+    |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan
     =/  m  (strand:spider ,vase)
     ^-  form:m
-    =/  args-json=json  [%o args]
-    =/  agent-name=(unit @t)
-      (~(deg jo:jut args-json) /agent so:dejs:format)
-    ?~  agent-name  ~|(%missing-agent !!)
-    =/  agent=@tas  (@tas u.agent-name)
-    ;<  our=@p  bind:m  get-our:io
+    =/  agent=(unit argument:tool:mcp)  (~(get by args) 'agent')
+    ?~  agent
+      ~|(%missing-agent !!)
+    ?>  ?=([%string @t] u.agent)
     ;<  ~  bind:m
-      (poke:io [our %hood] %kiln-nuke !>([agent %.y]))
+      (poke-our:io %hood %kiln-nuke !>([(@tas p.u.agent) %.y]))
     %-  pure:m
     !>  ^-  json
     %-  pairs:enjs:format
     :~  ['type' s+'text']
-        ['text' s+(crip "Nuked %{(trip u.agent-name)}")]
+        ['text' s+(crip "Nuked %{(trip p.u.agent)}")]
     ==
 ==

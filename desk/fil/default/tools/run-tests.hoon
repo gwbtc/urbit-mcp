@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, jut=json-utils, libstrand=strand
+/+  io=strandio, libstrand=strand
 =,  strand-fail=strand-fail:libstrand
 ^-  tool:mcp
 :*  'run-tests'
@@ -111,20 +111,21 @@
         loop(bez t.bez)  ::  no file found, skip this beam
       loop(bez t.bez, fiz (~(put in fiz) [[-.i.bez (snoc xup %hoon)] `tex]))
     --
-    |=  args=(map @t json)
+    |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan
     =/  m  (strand:spider ,vase)
     ^-  form:m
     ;<  =bowl:rand  bind:m  get-bowl:io
-    =/  args-json=json  [%o args]
-    =/  desk-name=(unit @t)
-      (~(deg jo:jut args-json) /desk so:dejs:format)
-    =/  path-text=(unit @t)
-      (~(deg jo:jut args-json) /path so:dejs:format)
-    ?~  desk-name  (strand-fail %missing-desk ~)
-    ?~  path-text  (strand-fail %missing-path ~)
-    =/  desk=@tas  (@tas u.desk-name)
-    =/  test-path=path  (stab u.path-text)
+    =/  desk-arg=(unit argument:tool:mcp)  (~(get by args) 'desk')
+    =/  path-arg=(unit argument:tool:mcp)  (~(get by args) 'path')
+    ?~  desk-arg
+      (strand-fail %missing-desk ~)
+    ?>  ?=([%string @t] u.desk-arg)
+    ?~  path-arg
+      (strand-fail %missing-path ~)
+    ?>  ?=([%string @t] u.path-arg)
+    =/  desk=@tas  (@tas p.u.desk-arg)
+    =/  test-path=path  (stab p.u.path-arg)
     ::  construct beam for the test path
     =/  bez=(list beam)
       :~  [[our.bowl desk da+now.bowl] test-path]

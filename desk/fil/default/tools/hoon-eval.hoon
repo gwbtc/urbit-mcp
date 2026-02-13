@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, jut=json-utils
+/+  io=strandio
 =,  strand-fail=strand-fail:strand:spider
 ^-  tool:mcp
 :*  'eval-hoon'
@@ -15,22 +15,21 @@
   ==
   ['hoon']~
   ^-  thread-builder:tool:mcp
-  |=  args=(map @t json)
+  |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
   ^-  shed:khan
   =/  m  (strand:spider ,vase)
   ^-  form:m
-  =/  args-json=json  [%o args]
-  =/  hoon-text=(unit @t)
-    (~(deg jo:jut args-json) /hoon so:dejs:format)
-  ?~  hoon-text
+  =/  hoon=(unit argument:tool:mcp)  (~(get by args) 'hoon')
+  ?~  hoon
     (strand-fail %missing-argument ~)
+  ?>  ?=([%string *] u.hoon)
   ;<    vax=vase
       bind:m
-    (eval-hoon:io (ream u.hoon-text) ~)
+    (eval-hoon:io (ream p.u.hoon) ~)
   %-  pure:m
   !>  ^-  json
   %-  pairs:enjs:format
   :~  ['type' s+'text']
-      ['text' s+u.hoon-text]
+      ['text' s+p.u.hoon]
   ==
 ==

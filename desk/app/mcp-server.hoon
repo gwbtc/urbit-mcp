@@ -48,8 +48,8 @@
 +$  state-0
   $:  %0
       tools=(set tool:mcp)
-      resources=(set resource:mcp)
       prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
   ==
 --
 %-  agent:dbug
@@ -80,66 +80,22 @@
 ::
 ++  on-init
   ^-  (quip card _this)
-  =/  defaults
-    .^((list path) %ct /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default)
-  =/  default-tools
-    %+  murn
-      defaults
-    |=  =path
-    ^-  (unit tool:mcp)
-    ?.  ?=([%fil %default %tools *] path)
-      ~
-    %-  some
-    !<  tool:mcp
-    .^(vase %ca (welp /(scot %p our.bowl)/mcp-server/(scot %da now.bowl) path))
-  ::
-  :-  :~  :*  %pass  /eyre/connect
-              %arvo  %e  %connect
-              [`/apps/mcp-server/api dap.bowl]
-          ==
+  =/  defaults=(list path)
+    .^  (list path)
+        %ct
+        /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default
+    ==
+  :_  this
+  :~  :*  %pass  /eyre/connect
+          %arvo  %e  %connect
+          [`/apps/mcp-server/api dap.bowl]
       ==
-  %=  this
-    tools      (sy default-tools)
-    resources  %-  sy
-               ^-  (list resource:mcp)
-               %+  welp
-                 ::  add resources for default tools
-                 %+  turn
-                   default-tools
-                 |=  =tool:mcp
-                 ^-  resource:mcp
-                 :*  %-  crip
-                     ;:  welp
-                         "beam://{<our.bowl>}/mcp-server/=/fil/default/tools/"
-                         (trip name.tool)
-                         "/hoon"
-                     ==
-                     ''
-                     ''
-                     `'text/hoon'
-                     `[~['agent'] ~ ~]
-                 ==
-               ::  add default resources
-               %+  murn
-                 defaults
-               |=  =path
-               ^-  (unit resource:mcp)
-               ?.  ?=([%fil %default %resources *] path)
-                 ~
-               %-  some
-               !<  resource:mcp
-               .^(vase %ca (welp /(scot %p our.bowl)/mcp-server/(scot %da now.bowl) path))
-    prompts    %-  sy
-               %+  murn
-                 defaults
-               |=  =path
-               ^-  (unit prompt:mcp)
-               ?.  ?=([%fil %default %prompts *] path)
-                 ~
-               %-  some
-               !<  prompt:mcp
-               .^(vase %ca (welp /(scot %p our.bowl)/mcp-server/(scot %da now.bowl) path))
-  ==
+      :*  %pass  ~
+          %arvo  %k
+          %fard  q.byk.bowl
+          %build-features
+          [%noun !>(defaults)]
+  ==  ==
 ::
 ++  on-poke
   |=  [=mark =vase]
@@ -150,14 +106,17 @@
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
       ::
-          %add-mcp-tool
+          ?(%add-tool %add-prompt %add-resource)
         ?>  =(src our):bowl
-        =/  =tool:mcp  !<(tool:mcp vase)
         ::  XX send listChanged notification
-        ::  XX add resource to scry the contents of this tool?
         :-  ~
-        %=  this
-          tools  (~(put in tools) tool)
+        ?-  mark
+          %add-tool
+            this(tools (~(put in tools) !<(tool:mcp vase)))
+          %add-prompt
+            this(prompts (~(put in prompts) !<(prompt:mcp vase)))
+          %add-resource
+            this(resources (~(put in resources) !<(resource:mcp vase)))
         ==
       ==
   ++  handle-req
@@ -166,8 +125,6 @@
     ?.  authenticated.req
       :_  this
       (send-event eyre-id (internal:error:rpc:ml 'Authentication required' ~))
-    =/  lin=request-line:server
-      (parse-request-line:server url.request.req)
     ?+  method.request.req
       [(simple-response eyre-id 405 ~) this]
     ::
@@ -227,10 +184,7 @@
                       ::  XX specify real or fake in the server name
                       :~  ['name' s+(crip "{<our.bowl>} urbit mcp server")]
                           ['version' s+'1.0.0']
-                      ==
-                  ==
-              ==
-          ==
+          ==  ==  ==  ==
         ::
             [~ [%s %'tools/list']]
           :_  this
@@ -274,8 +228,7 @@
                 %:  request:error:rpc:ml
                     (crip "Scheme not supported for URI {<u.uri>}")
                     id
-                ==
-            ==
+            ==  ==
           ::
               %'beam'
             =>  |%
@@ -338,6 +291,7 @@
                     ?~  off  tape
                     =/  clr  (oust [(need off) (lent bit)] tape)
                     $(tape :(weld (scag (need off) clr) bot (slag (need off) clr)))
+                  ::
                   ++  split
                     |=  [sep=tape =tape]
                     ^-  (list ^tape)
@@ -361,8 +315,7 @@
                   %:  request:error:rpc:ml
                       (crip "Invalid beam {<u.uri>}")
                       id
-                  ==
-              ==
+              ==  ==
             =/  request-id=(unit @ud)
               (bind id ni:dejs:format)
             ?~  request-id
@@ -373,8 +326,7 @@
                     %arvo  %k
                     %fard  q.byk.bowl
                     %read-beam  %beam  !>(parsed-beam)
-                ==
-            ==
+            ==  ==
           ::
               ?(%'http' %'https')
             =/  request-id=(unit @ud)
@@ -388,8 +340,7 @@
                     %arvo
                     %i
                     [%request [%'GET' u.uri ~ ~] *outbound-config:iris]
-                ==
-            ==
+            ==  ==
           ==
         ::
             [~ [%s %'prompts/get']]
@@ -413,13 +364,19 @@
             :_  this
             (send-event eyre-id (internal:error:rpc:ml (crip "Multiple {<u.prompt-name>} prompts found") id))
           =/  =prompt:mcp  i.prompt-results
+          =/  prompt-args=(map name:argument:prompt:mcp @t)
+            %+  fall
+              (~(deg jo:jut jon) /params/arguments (om so):dejs:format)
+            *(map name:argument:prompt:mcp @t)
           :_  this
           %:  send-event
               eyre-id
               %-  result:rpc:ml
               :-  %-  pairs:enjs:format
                   :~  ['description' s+desc.prompt]
-                      ['messages' (prompt-messages-to-json:ml messages.prompt)]
+                      :-  'messages'
+                      %-  prompt-messages-to-json:ml
+                      (messages-builder.prompt prompt-args)
                   ==
               id
           ==
@@ -430,7 +387,7 @@
             :_  this
             (send-event eyre-id (params:error:rpc:ml 'Missing JSON RPC request ID' id))
           :_  this
-          =/  tool-name=(unit @t)  
+          =/  tool-name=(unit @t)
             (~(deg jo:jut jon) /params/name so:dejs:format)
           ?~  tool-name
             (send-event eyre-id (params:error:rpc:ml 'Missing or invalid tool name' id))
@@ -456,13 +413,36 @@
             ~
           ?~  args-map
             (send-event eyre-id (params:error:rpc:ml 'Invalid arguments' id))
+          =>  |%
+              ++  parse-arg
+                |=  jon=json
+                ^-  argument:tool:mcp
+                ?+  jon
+                  ~
+                ::
+                    [%a *]
+                  [%array (turn p.jon parse-arg)]
+                ::
+                    [%b ?]
+                  [%boolean p.jon]
+                ::
+                    [%o *]
+                  [%object (~(run by p.jon) parse-arg)]
+                ::
+                    [%n @ta]
+                  [%number (slav %ud p.jon)]
+                ::
+                    [%s @t]
+                  [%string p.jon]
+                ==
+              --
           ^-  (list card)
           :~  :*  %pass  /res/tool/[eyre-id]/(scot %ud u.rpc-id)
                   %arvo  %k
                   %lard  q.byk.bowl
-                  (thread-builder.i.tool-results u.args-map)
-              ==
-          ==
+                  %-  thread-builder.i.tool-results
+                  (~(run by u.args-map) parse-arg)
+          ==  ==
         ==
       ==
     ==
@@ -491,8 +471,7 @@
   |=  [=(pole knot) =sign-arvo]
   ^-  (quip card _this)
   ?+  pole
-    ~_  leaf/"mcp-server: unrecognized wire {<`path`pole>}"
-    !!
+    `this
   ::
       [%eyre %connect ~]
     ?>  ?=([%eyre %bound *] sign-arvo)

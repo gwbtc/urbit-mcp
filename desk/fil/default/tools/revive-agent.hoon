@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, jut=json-utils
+/+  io=strandio
 ^-  tool:mcp
 :*  'revive-agent'
     '''
@@ -15,21 +15,22 @@
     ==
     ['agent']~
     ^-  thread-builder:tool:mcp
-    |=  args=(map @t json)
+    |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan
     =/  m  (strand:spider ,vase)
     ^-  form:m
-    =/  args-json=json  [%o args]
-    =/  agent-name=(unit @t)
-      (~(deg jo:jut args-json) /agent so:dejs:format)
-    ?~  agent-name  ~|(%missing-agent !!)
+    =/  agent=(unit argument:tool:mcp)
+      (~(get by args) 'agent')
+    ?~  agent
+      ~|(%missing-agent !!)
+    ?>  ?=([%string @t] u.agent)
     ;<  our=@p  bind:m  get-our:io
     ;<  ~  bind:m
-      (poke:io [our %hood] %kiln-revive !>((@tas u.agent-name)))
+      (poke:io [our %hood] %kiln-revive !>((@tas p.u.agent)))
     %-  pure:m
     !>  ^-  json
     %-  pairs:enjs:format
     :~  ['type' s+'text']
-        ['text' s+(crip "Agent %{(trip u.agent-name)} revived successfully")]
+        ['text' s+(crip "Agent %{(trip p.u.agent)} revived successfully")]
     ==
 ==

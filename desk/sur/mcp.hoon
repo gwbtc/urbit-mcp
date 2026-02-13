@@ -1,4 +1,3 @@
-/-  spider
 |%
 ++  tool
   =<  tool
@@ -14,7 +13,16 @@
   ::
   +$  thread-builder
     $+  mcp-thread-builder
-    $-((map @t json) _*form:(strand:spider ,vase))
+    $-((map name:parameter argument) shed:khan)
+  ::
+  +$  argument
+    $@  ~
+    $%  [%string p=@t]
+        [%number p=@ud]
+        [%boolean p=?]
+        [%array p=(list argument)]
+        [%object p=(map @t argument)]
+    ==
   ::
   ++  parameter
     |%
@@ -67,15 +75,21 @@
         desc=@t
         arguments=(list argument)
         icons=(list icon)
-        messages=(list message)
+        messages-builder=$-((map name:argument @t) (list message))
     ==
   ::
-  +$  argument
-    $+  mcp-prompt-argument
-    $:  name=@t
-        desc=@t
-        required=?
-    ==
+  ++  argument
+     =<  argument
+     |%
+     +$  name  @t
+     ::
+     +$  argument
+       $+  mcp-prompt-argument
+       $:  =name
+           desc=@t
+           required=?
+       ==
+     --
   ::
   +$  icon
     $+  mcp-prompt-icon

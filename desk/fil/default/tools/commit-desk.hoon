@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  io=strandio, jut=json-utils
+/+  io=strandio
 ^-  tool:mcp
 :*  'commit-desk'
     '''
@@ -49,19 +49,18 @@
         `[%rose p.tak (prune-err q.tak)]
       ==
     --
-    |=  args=(map @t json)
+    |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan
     =/  m  (strand:spider ,vase)
     ^-  form:m
-    =/  args-json=json  [%o args]
-    =/  desk-name=(unit @t)
-      (~(deg jo:jut args-json) /desk so:dejs:format)
-    ?~  desk-name  ~|(%missing-desk !!)
-    =/  desk=@tas  (@tas u.desk-name)
+    =/  dek=(unit argument:tool:mcp)  (~(get by args) 'desk')
+    ?~  dek
+      ~|(%missing-desk !!)
+    ?>  ?=([%string *] u.dek)
     ;<  ~  bind:m
       (send-raw-card:io [%pass /dill-logs %arvo %d %logs `~])
     ;<  ~  bind:m
-      (poke-our:io %hood %kiln-commit !>([desk %.n]))
+      (poke-our:io %hood %kiln-commit !>([(@tas p.u.dek) %.n]))
     ;<  [wire =sign-arvo]  bind:m
       ((set-timeout:io ,[wire sign-arvo]) ~s2 take-sign-arvo:io)
     ?>  ?=([%dill %logs *] sign-arvo)
@@ -74,7 +73,10 @@
       !>  ^-  json
       %-  pairs:enjs:format
       :~  ['type' s+'text']
-          ['text' s+(crip "{<[%error p.told (print-tang-to-wain (prune-err q.told))]>}")]
+          :-  'text'
+          :-  %s
+          %-  crip
+          "{<[%error p.told (print-tang-to-wain (prune-err q.told))]>}"
       ==
     ::
       [%talk *]
