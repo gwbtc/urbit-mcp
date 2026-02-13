@@ -1,5 +1,5 @@
 /-  mcp, spider
-/+  server, libstrand=strand, io=strandio, json-utils
+/+  server, libstrand=strand, io=strandio
 =,  strand-fail=strand-fail:strand:spider
 |%
 ::  MCP (Model Context Protocol) - JSON-RPC 2.0 Protocol Adapter
