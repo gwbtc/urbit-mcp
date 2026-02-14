@@ -80,11 +80,6 @@
 ::
 ++  on-init
   ^-  (quip card _this)
-  =/  defaults=(list path)
-    .^  (list path)
-        %ct
-        /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default
-    ==
   :_  this
   :~  :*  %pass  /eyre/connect
           %arvo  %e  %connect
@@ -93,8 +88,21 @@
       :*  %pass  ~
           %arvo  %k
           %fard  q.byk.bowl
-          %build-features
-          [%noun !>(defaults)]
+          %install-features
+          :-  %noun
+          !>  ^-  (list beam)
+          %+  turn
+            .^  (list path)
+                %ct
+                /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default
+            ==
+          |=  pax=path
+          ^-  beam
+          %-  need
+          %-  de-beam
+          %+  welp
+            /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)
+          pax
   ==  ==
 ::
 ++  on-poke

@@ -3,7 +3,7 @@
 =,  strand-fail=strand-fail:strand:spider
 ^-  thread:spider
 |=  arg=vase
-=/  =(list path)  !<((list path) arg)
+=/  =(list beam)  !<((list beam) arg)
 ^-  shed:khan
 =/  m  (strand:spider ,vase)
 ^-  form:m
@@ -11,18 +11,23 @@
 |-
 ?~  list
   (pure:m !>(~))
+=*  bem  i.list
+?.  =(p.bem our.bowl)
+  ~&  >>>  %cant-install-foreign-tools
+  ~&  >>>  (en-beam bem)
+  $(list t.list)
 ;<  vux=(unit vase)  bind:m
-  (build-file:io [our.bowl %mcp-server da+now.bowl] i.list)
+  (build-file:io bem)
 ?~  vux
-  ~&  >>>  [%failed-to-build i.list]
+  ~&  >>>  [%failed-to-build (en-beam bem)]
   $(list t.list)
 =/  =mark
-  ?+  i.list  %noun
+  ?+  s.bem  %noun
     [%fil %default %tools *]      %add-tool
     [%fil %default %prompts *]    %add-prompt
     [%fil %default %resources *]  %add-resource
   ==
-~&  >  [%built i.list]
+~&  >  [%built (en-beam bem)]
 ;<  ~  bind:m
   (poke-our:io %mcp-server mark u.vux)
 $(list t.list)
