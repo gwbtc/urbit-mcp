@@ -109,6 +109,10 @@
       (strand-fail %invalid-beam-uri ~)
     ?.  =(p.u.bem our.bowl)
       (strand-fail %cant-install-foreign-tools ~)
+    ;<  has=?  bind:m
+      (check-for-file:io u.bem)
+    ?.  has
+      (strand-fail %no-file-at-this-path [%leaf " {<u.bem>}"]~)
     ;<  vux=(unit vase)  bind:m
       (build-file:io u.bem)
     ?~  vux
