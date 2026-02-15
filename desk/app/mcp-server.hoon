@@ -94,7 +94,7 @@
           %+  turn
             .^  (list path)
                 %ct
-                /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default
+                /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default/mcp
             ==
           |=  pax=path
           ^-  beam
