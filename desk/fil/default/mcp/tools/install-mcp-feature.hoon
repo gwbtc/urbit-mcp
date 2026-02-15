@@ -119,9 +119,9 @@
       (strand-fail %failed-to-build ~)
     =/  =mark
       ?+  s.u.bem  %noun
-        [%fil %default %tools *]      %add-tool
-        [%fil %default %prompts *]    %add-prompt
-        [%fil %default %resources *]  %add-resource
+        [%fil %default %mcp %tools *]      %add-tool
+        [%fil %default %mcp %prompts *]    %add-prompt
+        [%fil %default %mcp %resources *]  %add-resource
       ==
     ;<  ~  bind:m
       (poke-our:io %mcp-server mark u.vux)
