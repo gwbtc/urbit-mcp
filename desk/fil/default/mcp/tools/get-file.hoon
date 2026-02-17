@@ -22,12 +22,12 @@
   Fetch a Clay file (local or remote)
   '''
   %-  my
-  :~  ['ship' [%string 'The Urbit ID of the ship this file is on. (Default: our ship.)']]
-      ['desk' [%string 'The desk this file is in. (Default: %base.)']]
-      ['case' [%string 'The $case (revision number or datetime) at which to access this file. (Default: now.)']]
-      ['path' [%string 'The remaining filepath.']]
+  :~  ['ship' [%string 'The Urbit ID of the ship this file is on.']]
+      ['desk' [%string 'The desk this file is in.']]
+      ['case' [%string 'The $case (revision number or datetime) at which to access this file.(Default: now.)']]
+      ['path' [%string 'The remaining filepath. Must begin with a /.']]
   ==
-  ~['path']
+  ~['ship' 'desk' 'path']
   ^-  thread-builder:tool:mcp
   |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
   =/  m  (strand:spider ,vase)
@@ -39,21 +39,23 @@
   ?~  pax
     (strand-fail %no-path ~)
   ?>  ?=([%string @t] u.pax)
-  =/  path-list=(unit path)  
-    (rush p.u.pax ;~(pfix fas (more fas sym)))
-  ?~  path-list
-    (strand-fail %invalid-path ~)
-  =/  her=(unit argument:tool:mcp)   (~(get by args) 'ship')
-  =/  dek=(unit argument:tool:mcp)   (~(get by args) 'desk')  
+  =/  =path
+    ?:  =('/' (snag 0 (trip p.u.pax)))
+      (stab p.u.pax)
+    (stab (crip (slag 1 (trip p.u.pax))))
+  =/  sip=(unit argument:tool:mcp)  (~(get by args) 'ship')
+  =/  who=(unit @t)
+    ?~  sip
+      ~
+    ?>  ?=([%string @t] u.sip)
+    `p.u.sip
+  ?~  who
+    ~|(%cant-find-ship !!)
+  =/  dek=(unit argument:tool:mcp)   (~(get by args) 'desk')
+  ?~  dek
+    ~|(%missing-desk !!)
+  ?>  ?=([%string @t] u.dek)
   =/  cast=(unit argument:tool:mcp)  (~(get by args) 'case')
-  =/  ship-p=(unit @p)
-    ?~  her  ~
-    ?>  ?=([%string @t] u.her)
-    (rush p.u.her ;~(pfix sig fed:ag))
-  =/  desk-tas=(unit @tas)
-    ?~  dek  ~
-    ?>  ?=([%string @t] u.dek)
-    `(@tas p.u.dek)
   =/  cuse=(unit case)
     ?~  cast
       `da+now.bowl
@@ -72,12 +74,12 @@
     ==
   ;<  =riot:clay  bind:m
     %:  warp:io
-        (fall ship-p our.bowl)
-        (fall desk-tas %base)
+        (@p (slav %p u.who))
+        (@tas p.u.dek)
         ~
         %sing  %x
         (fall cuse da+now.bowl)
-        u.path-list
+        path
     ==
   %-  pure:m
   !>  ^-  json
