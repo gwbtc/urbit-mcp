@@ -89,7 +89,7 @@
       :-  %s
       ?~  riot
         'Failed to fetch file.'
-      %-  crip
+      %-  of-wain:format
       %-  print-tang-to-wain
       %-  pretty-file:pf
       !<(noun q.r.u.riot)
