@@ -1,0 +1,11 @@
+# build
+.peru
+.tags
+dist
+dist-dev
+
+# claude
+.claude
+
+# config
+.env
