@@ -42,7 +42,10 @@
     (on-poke:def mark vase)
   ::
       %noun
-    `this
+    :-  ~
+    %=  this
+      values  :-(!<(@ud vase) values)
+    ==
   ==
 ::
 ++  on-peek
@@ -51,13 +54,27 @@
   ?+  pole
     (on-peek:def pole)
   ::
-  ::  .^(noun %gx /=/this-desk/=/values/noun)
+  ::  .^(json %gx /=/this-desk/=/values/json)
       [%x %values ~]
-    ``[%noun !>(values)]
+    %-  some
+    %-  some
+    :-  %json
+    !>  ^-  json
+    %-  frond:enjs:format
+    :-  'values'
+    :-  %a
+    (turn values |=(val=@ n+(scot %ud val)))
   ::
-  ::  .^(noun %gx /=/this-desk/=/value/1/noun)
+  ::  .^(json %gx /=/this-desk/=/value/0/json)
       [%x %value pos=@ta ~]
-    ``[%noun !>((snag (slav %ud pos.pole) values))]
+    %-  some
+    %-  some
+    :-  %json
+    !>  ^-  json
+    %-  frond:enjs:format
+    :-  'value'
+    :-  %n
+    (scot %ud (snag (slav %ud pos.pole) values))
   ==
 ::
 ++  on-watch
