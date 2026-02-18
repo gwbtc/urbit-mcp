@@ -80,7 +80,7 @@
       %-  send-raw-card:io
       :*  %pass   /add-tool
           %agent  [our %mcp-server]
-          %poke   %add-mcp-tool
+          %poke   %add-tool
           !>([p.u.nam p.u.des par req !<(thread-builder:tool:mcp vax)])
       ==
     ;<  ~  bind:m  (take-poke-ack:io /add-tool)
