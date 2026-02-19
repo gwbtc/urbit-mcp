@@ -6,45 +6,41 @@ A general-purpose Model Context Protocol interface for Urbit.
 
 ### 1. Build and Install
 
-*Requires [peru](https://github.com/buildinspace/peru) package manager.*
+*Requires [peru](https://github.com/buildinspace/peru) package manager. Install and set that up if you don't have it already. Make sure `peru --version` works.*
 
-```bash
-# Clone repository
-$ git clone <repo-url>
-$ cd urbit-mcp-server
-
-# Install dependencies
-$ pip install peru
-```
+Create and mount the desk on your Urbit ship:
 
 ```dojo
-::  Create and mount the desk on your Urbit ship
 > |new-desk %mcp-server
 > |mount %mcp-server
 ```
 
+In the `urbit-mcp-server` folder, run the [build script](build.sh). By default this will install dependencies into `/dist` in this folder. Use the `-p` argument to additionally copy the %mcp-server source and its dependencies into your ship's desk. This script will take a minute if it's your first time running it.
+
 ```bash
-# Install dependencies and copy /dist to your desk
-$ ./build.sh -p ~/path/to/ship/mcp-server
+$ cd urbit-mcp-server
+$ build.sh -p ~/path/to/zod/mcp-server
 ```
 
 ```dojo
-::  commit and install on the ship
 > |commit %mcp-server
 > |install our %mcp-server
 ```
 
 ### 2. Authentication Setup
 
-Get your ship's web login code:
-```
-~sampel:dojo> +code
+Get your ship's web login code from the Dojo:
+
+```dojo
+> +code
+lidlut-tabwed-pillex-ridrup
+~zod:dojo>
 ```
 
 Authenticate and get session cookie:
 
 ```bash
-curl -i http://localhost:8080/~/login -X POST -d "password=your-web-login-code"
+curl -i http://localhost:80/~/login -X POST -d "password=lidlut-tabwed-pillex-ridrup"
 ```
 
 Extract the cookie from the `set-cookie` header, which will look like this:
