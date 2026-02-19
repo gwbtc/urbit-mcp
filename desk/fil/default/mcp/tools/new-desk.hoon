@@ -12,7 +12,7 @@
         Name of the desk to create (e.g. 'my-app').
         '''
     ==
-    ['desk']~
+    ~['desk']
     ^-  thread-builder:tool:mcp
     |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan

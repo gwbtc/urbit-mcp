@@ -12,7 +12,7 @@
         Desk to mount (e.g. 'base' to mount %base).
         '''
     ==
-    ['desk']~
+    ~['desk']
     ^-  thread-builder:tool:mcp
     |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan

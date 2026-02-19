@@ -13,7 +13,7 @@
         Gall agent to nuke (e.g. 'graph-store' to nuke %graph-store).
         '''
     ==
-    ['agent']~
+    ~['agent']
     ^-  thread-builder:tool:mcp
     |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan

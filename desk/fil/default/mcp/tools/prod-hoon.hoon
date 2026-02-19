@@ -14,7 +14,7 @@
       Expected result: '4'. All results will be text.
       '''
   ==
-  ['hoon']~
+  ~['hoon']
   ^-  thread-builder:tool:mcp
   |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
   ^-  shed:khan

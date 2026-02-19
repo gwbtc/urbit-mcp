@@ -6,7 +6,7 @@
     Commit code changes to a desk.
     '''
     (my ['desk' [%string (crip "desk name (e.g. 'base' to commit the %base desk)")]]~)
-    ['desk']~
+    ~['desk']
     ^-  thread-builder:tool:mcp
     =>
     |%

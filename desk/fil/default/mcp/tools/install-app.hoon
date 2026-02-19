@@ -20,7 +20,7 @@
         App (desk) to install (e.g. 'mcp-server' to install %mcp-server).
         '''
     ==
-    ['desk']~
+    ~['desk']
     ^-  thread-builder:tool:mcp
     |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan

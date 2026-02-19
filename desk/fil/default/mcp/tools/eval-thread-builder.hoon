@@ -16,7 +16,7 @@
         The way dependencies are imported in the default tools is not the way you'll have to do it.
         '''
     ==
-    ['hoon']~
+    ~['hoon']
     ^-  thread-builder:tool:mcp
     |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan

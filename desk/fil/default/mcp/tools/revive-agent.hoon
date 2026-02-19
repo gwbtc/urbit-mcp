@@ -13,7 +13,7 @@
         Desk name to revive (e.g. 'hark' to revive %hark).
         '''
     ==
-    ['agent']~
+    ~['agent']
     ^-  thread-builder:tool:mcp
     |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
     ^-  shed:khan
