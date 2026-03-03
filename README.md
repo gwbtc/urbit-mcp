@@ -54,7 +54,7 @@ urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm
 Add the MCP server to Claude using HTTP transport:
 
 ```bash
-claude mcp add --transport http zod http://localhost:80/apps/mcp-server/api --header "Cookie: urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm"
+claude mcp add --transport http zod http://localhost:80/apps/mcp-server/api --header "Cookie: urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm" --scope user
 ```
 
 ## Development
