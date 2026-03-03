@@ -83,7 +83,7 @@
   :_  this
   :~  :*  %pass  /eyre/connect
           %arvo  %e  %connect
-          [`/apps/mcp-server/api dap.bowl]
+          [`/mcp dap.bowl]
       ==
       :*  %pass  ~
           %arvo  %k
@@ -485,7 +485,7 @@
     ?>  ?=([%eyre %bound *] sign-arvo)
     ?:  accepted.sign-arvo
       `this
-    %-  (slog leaf/"mcp-server: failed to bind {<dap.bowl>} to /apps/mcp-server/api" ~)
+    %-  (slog leaf/"mcp: failed to bind {<dap.bowl>} to /mcp" ~)
     `this
   ::
       [%res feat=@ta eyre-id=@ta rpc-id=@ta und=*]

@@ -12,7 +12,7 @@
         :-  %string
         '''
         The beam URI of the feature file to install
-        (e.g. "beam://=/mcp-server/=/fil/default/tools/my-tool/hoon").
+        (e.g. "beam://=/mcp/=/fil/default/tools/my-tool/hoon").
         '''
     ==
     ~['beam']

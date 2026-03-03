@@ -9,7 +9,7 @@
   :~  :-  'desk'
       :-  %string
       '''
-      The desk to list files from (e.g. 'base' or 'mcp-server').
+      The desk to list files from (e.g. 'base' or 'mcp').
       '''
   ::
       :-  'path'

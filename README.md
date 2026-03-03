@@ -1,4 +1,4 @@
-# Urbit MCP Server
+# Urbit MCP
 
 A general-purpose Model Context Protocol interface for Urbit.
 
@@ -11,20 +11,20 @@ A general-purpose Model Context Protocol interface for Urbit.
 Create and mount the desk on your Urbit ship:
 
 ```dojo
-> |new-desk %mcp-server
-> |mount %mcp-server
+> |new-desk %mcp
+> |mount %mcp
 ```
 
-In the `urbit-mcp-server` folder, run the [build script](build.sh). By default this will install dependencies into `/dist` in this folder. Use the `-p` argument to additionally copy the %mcp-server source and its dependencies into your ship's desk. This script will take a minute if it's your first time running it.
+In the `urbit-mcp` folder, run the [build script](build.sh). By default this will install dependencies into `/dist` in this folder. Use the `-p` argument to additionally copy the %mcp source and its dependencies into your ship's desk. This script will take a minute if it's your first time running it.
 
 ```bash
-$ cd urbit-mcp-server
-$ build.sh -p ~/path/to/zod/mcp-server
+$ cd urbit-mcp
+$ build.sh -p ~/path/to/zod/mcp
 ```
 
 ```dojo
-> |commit %mcp-server
-> |install our %mcp-server
+> |commit %mcp
+> |install our %mcp
 ```
 
 ### 2. Authentication Setup
@@ -54,7 +54,7 @@ urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm
 Add the MCP server to Claude using HTTP transport:
 
 ```bash
-claude mcp add --transport http zod http://localhost:80/apps/mcp-server/api --header "Cookie: urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm" --scope user
+claude mcp add --transport http zod http://localhost:80/mcp --header "Cookie: urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm" --scope user
 ```
 
 ## Development

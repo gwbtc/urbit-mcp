@@ -3,7 +3,7 @@
 ^-  tool:mcp
 :*  'scry'
   '''
-  Run a scry (read) to retrieve data from a vane or agent.
+  Run a scry (read) to retrieve data from an agent.
   Path format: /[vane letter][care]/[desk]/[path after beak]/[mark]
   The return type will always be JSON, and this read will fail if there is no
   mark conversion in the endpoint's desk from the endpoint's mark to JSON.

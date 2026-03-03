@@ -6,7 +6,7 @@
     Commit changes to a desk.
     '''
     :~  :*  'desk'
-            'Name of the desk to commit (e.g. "mcp-server")'
+            'Name of the desk to commit (e.g. "mcp")'
             |
         ==
     ==

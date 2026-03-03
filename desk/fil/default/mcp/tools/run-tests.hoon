@@ -7,7 +7,7 @@
     Run unit tests and/or integration tests, given a desk and a path prefix.
     '''
     %-  my
-    :~  ['desk' [%string 'Desk name to run tests on (e.g. "base" or "mcp-server")']]
+    :~  ['desk' [%string 'Desk name to run tests on (e.g. "base" or "mcp")']]
         ['path' [%string 'Path prefix for tests to run (e.g. "/tests" or "/tests/lib")']]
     ==
     ~['desk' 'path']

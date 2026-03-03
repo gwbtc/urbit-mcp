@@ -17,7 +17,7 @@
         :-  'desk'
         :-  %string
         '''
-        App (desk) to install (e.g. 'mcp-server' to install %mcp-server).
+        App (desk) to install (e.g. 'mcp' to install %mcp).
         '''
     ==
     ~['desk']
