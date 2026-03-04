@@ -29,17 +29,12 @@
     eyre-id
   ^-  simple-payload:http
   :-  :-  200
-      :~  ['content-type' 'text/event-stream']
+      :~  ['content-type' 'application/json']
           ['cache-control' 'no-cache']
       ==
     %-  some
     %-  as-octt:mimes:html
-    ;:  welp
-        "data: "
-        (trip (en:json:html json))
-        "\0a"
-        "\0a"
-    ==
+    (trip (en:json:html json))
 ::
 +$  card  card:agent:gall
 +$  versioned-state
@@ -94,7 +89,7 @@
           %+  turn
             .^  (list path)
                 %ct
-                /(scot %p our.bowl)/mcp-server/(scot %da now.bowl)/fil/default/mcp
+                /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)/fil/default/mcp
             ==
           |=  pax=path
           ^-  beam
