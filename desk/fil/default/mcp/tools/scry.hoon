@@ -1,37 +1,54 @@
 /-  mcp, spider
-/+  io=strandio
+/+  io=strandio, libstrand=strand
+=,  strand-fail=strand-fail:libstrand
 ^-  tool:mcp
-:*  'scry'
+:*  'scry-agent'
   '''
-  Run a scry (read) to retrieve data from an agent.
-  Path format: /[vane letter][care]/[desk]/[path after beak]/[mark]
-  The return type will always be JSON, and this read will fail if there is no
-  mark conversion in the endpoint's desk from the endpoint's mark to JSON.
+  Run a %gx scry (read) to retrieve data from a Gall agent.
+  The endpoint must return JSON for this tool to work.
   '''
   %-  my
-  :~  :-  'path'
+  :~  :-  'agent'
       :-  %string
       '''
-      The scry path (e.g. "/gx/mcp-server/tools/json"
-      or "/cx/base/sys/kelvin").
+      The Gall agent to scry.
+      '''
+      :-  'path'
+      :-  %string
+      '''
+      The scry path (e.g. "/tools/json").
       '''
   ==
-  ~['path']
+  ~['agent' 'path']
   ^-  thread-builder:tool:mcp
   |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
   ^-  shed:khan
   =/  m  (strand:spider ,vase)
   ^-  form:m
+  =/  gen=(unit argument:tool:mcp)  (~(get by args) 'agent')
+  ?~  gen  ~|(%missing-agent !!)
   =/  pax=(unit argument:tool:mcp)  (~(get by args) 'path')
-  ?~  pax
-    ~|(%missing-path !!)
+  ?~  pax  ~|(%missing-path !!)
+  ?>  ?=([%string @t] u.gen)
   ?>  ?=([%string @t] u.pax)
-  ;<  result=json  bind:m
-    (scry:io json (stab p.u.pax))
+  =/  =path  (stab p.u.pax)
+  ?.  =(%json (rear path))
+    (strand-fail %scry-path-must-return-json ~)
+  ;<  =bowl:spider  bind:m  get-bowl:io
+  =/  mule-result
+    %-  mule
+    |.
+    .^  *
+        %gx
+        (welp /(scot %p our.bowl)/[p.u.gen]/(scot %da now.bowl) path)
+    ==
+  ?>  ?=([? p=*] mule-result)
+  ?.  -.mule-result
+    (strand-fail %scry-failed (tang p.mule-result))
   %-  pure:m
   !>  ^-  json
   %-  pairs:enjs:format
   :~  ['type' s+'text']
-      ['text' s+(crip "{<(en:json:html result)>}")]
+      ['text' s+(crip "{<(en:json:html (json p.mule-result))>}")]
   ==
 ==
