@@ -31,7 +31,8 @@
   ?~  pax  ~|(%missing-path !!)
   ?>  ?=([%string @t] u.gen)
   ?>  ?=([%string @t] u.pax)
-  =/  =path  (stab p.u.pax)
+  ::  slap path to handle interpolation, +scot etc.
+  =/  =path  !<(path (slap !>(.) (ream p.u.pax)))
   ?.  =(%json (rear path))
     (strand-fail %scry-path-must-return-json ~)
   ;<  =bowl:spider  bind:m  get-bowl:io
