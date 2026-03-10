@@ -49,12 +49,26 @@ Extract the cookie from the `set-cookie` header, which will look like this:
 urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm
 ```
 
-### 3. Register with Claude
+### 3A. Register with Claude
 
 Add the MCP server to Claude using HTTP transport:
 
 ```bash
 claude mcp add --transport http zod http://localhost:80/mcp --header "Cookie: urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm" --scope user
+```
+### 3B. Register with Codex
+
+Codex requires the `mcp-proxy` python package to function. Install with `uvx mcp-proxy`, then append this to your `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.fen]
+command = "uvx"
+args = [
+  "mcp-proxy",
+  "--transport", "streamablehttp",
+  "--headers", "Cookie", "urbauth-~your-ship=0v2.20fhu.t7ki1.cftjr.3s8bv.d9i5l",
+  "http://localhost:80/mcp"
+]
 ```
 
 ## Development
