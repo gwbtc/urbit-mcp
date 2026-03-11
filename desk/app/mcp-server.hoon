@@ -38,7 +38,7 @@
 ::
 +$  card  card:agent:gall
 +$  versioned-state
-  $:  state-0
+  $%  state-0
   ==
 +$  state-0
   $:  %0
