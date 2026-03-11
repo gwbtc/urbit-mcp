@@ -71,6 +71,40 @@ args = [
 ]
 ```
 
+## Usage
+
+### Tools
+
+Just ask! You can see the default tools [here](./desk/fil/default/mcp/tools).
+
+You can ask your LLM to add new Tools. Give it a description (and ideally, examples) and it will do its best, or provide a Hoon thread for it to adapt to run in `%mcp-server`. Threads in `%mcp-server` must be of signature `$-((map @t argument:tool:mcp) shed:khan)`.
+
+### Prompts (slash commands)
+
+MCP prompts for most default tools are available as slash commands, using the format `/mcp__<mcp server>__<tool name>`.
+
+```
+/mcp__zod__commit-desk mcp
+```
+
+Running these will append a predefined prompt to the conversation and call out to the LLM provider.
+
+Type `/` in Claude Code to see available Prompts.
+
+You can ask your LLM to add new Prompts. These can be any reusable snippet of text you like.
+
+### Resources (@ mentions)
+
+MCP resources can be referenced with an `@` mention to pull the contents into the context window.
+
+```
+@zod:https://docs.urbit.org/llms.txt
+```
+
+Type `@` in Claude Code to see available Resources.
+
+You can ask your LLM to add new Resources by providing an `https://` URI to a public webpage or a `beam://` URI to a file in Clay.
+
 ## Development
 
 ### Build Commands
