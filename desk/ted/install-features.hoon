@@ -27,7 +27,6 @@
     [%fil %default %mcp %prompts *]    %add-prompt
     [%fil %default %mcp %resources *]  %add-resource
   ==
-~&  >  [%built (en-beam bem)]
 ;<  ~  bind:m
   (poke-our:io %mcp-server mark u.vux)
 $(list t.list)
