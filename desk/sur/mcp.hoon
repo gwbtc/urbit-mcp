@@ -2,12 +2,21 @@
 ++  tool
   =<  tool
   |%
+  +$  name  @t
+  +$  desc  @t
+  ::
+  +$  parameters
+    (map name:parameter def:parameter)
+  ::
+  +$  required
+    (list name:parameter)
+  ::
   +$  tool
     $+  mcp-tool
-    $:  name=@t
-        desc=@t
-        parameters=(map name:parameter def:parameter)
-        required=(list name:parameter)
+    $:  =name
+        =desc
+        =parameters
+        =required
         =thread-builder
     ==
   ::
