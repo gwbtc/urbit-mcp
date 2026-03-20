@@ -2,6 +2,8 @@
 
 A general-purpose Model Context Protocol interface for Urbit.
 
+[![Urbit MCP server](https://glama.ai/mcp/servers/gwbtc/urbit-mcp/badges/card.svg)](https://glama.ai/mcp/servers/gwbtc/urbit-mcp)
+
 ## Developer Setup
 
 ### 1. Build and Install
