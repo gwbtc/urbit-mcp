@@ -190,7 +190,7 @@ jobs:
             const body = [
               '## Groundwire Verification Failed',
               '',
-              'This PR will not be reviewed because commits are not signed by a recognized [Groundwire ID](https://groundwire.network).',
+              'This PR will not be reviewed because commits are not signed by a recognized [Groundwire ID](https://groundwire.io).',
               '',
               '```',
               results,
@@ -201,12 +201,12 @@ jobs:
               'Commit signatures are cryptographically verified against the signer\'s on-chain networking key.',
               '',
               '### How to fix this',
-              '1. **Get a Groundwire ID** — [groundwire.network/get-started](https://groundwire.network/get-started)',
+              '1. **Get a Groundwire ID** — [groundwire.io/guide.html](https://groundwire.io/guide.html)',
               '2. **Install commit signing** — `./hooks/install.sh <your-ship-url>`',
               '3. **Re-sign your commits** — `git rebase --exec "true" HEAD~N` (after configuring signing)',
               '',
               '---',
-              '*This repository is protected by [Groundwire for GitHub](https://groundwire.network/github).*'
+              '*This repository is protected by [Groundwire for GitHub](https://github.com/gwbtc/vitriol).*'
             ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
