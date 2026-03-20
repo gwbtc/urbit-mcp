@@ -1,0 +1,229 @@
+name: Groundwire PR Verification
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+env:
+  # The CI's own Groundwire ship HTTP endpoint (repo secret)
+  GROUNDWIRE_ENDPOINT: ${{ secrets.GROUNDWIRE_ENDPOINT }}
+  # Auth cookie for the CI's Groundwire ship (repo secret)
+  GROUNDWIRE_AUTH: ${{ secrets.GROUNDWIRE_AUTH }}
+
+jobs:
+  verify-groundwire-id:
+    name: Verify Groundwire ID
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR commits
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Extract and verify commit signatures
+        id: verify
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          COMMITS=$(git rev-list "${BASE_SHA}..${HEAD_SHA}")
+          COMMIT_COUNT=$(echo "$COMMITS" | wc -l)
+
+          echo "Verifying ${COMMIT_COUNT} commit(s) in ${BASE_SHA:0:8}..${HEAD_SHA:0:8}"
+
+          VERIFIED="true"
+          RESULTS=""
+
+          for COMMIT in $COMMITS; do
+            SHORT="${COMMIT:0:8}"
+            RAW=$(git cat-file commit "$COMMIT")
+
+            # --- Check for gpgsig header ---
+            if ! echo "$RAW" | grep -q '^gpgsig '; then
+              echo "::error::Commit ${SHORT} is not signed."
+              RESULTS="${RESULTS}UNSIGNED ${SHORT}\n"
+              VERIFIED="false"
+              continue
+            fi
+
+            # --- Extract the signature block ---
+            SIG_BLOCK=$(echo "$RAW" | sed -n '/^gpgsig /{s/^gpgsig //; p; :a; n; /^ /{ s/^ //; p; ba; }; q}')
+
+            # --- Check for Groundwire signature format ---
+            if ! echo "$SIG_BLOCK" | grep -q 'BEGIN GROUNDWIRE SIGNATURE'; then
+              echo "::error::Commit ${SHORT}: not a Groundwire signature."
+              RESULTS="${RESULTS}NOT_GROUNDWIRE ${SHORT}\n"
+              VERIFIED="false"
+              continue
+            fi
+
+            # --- Parse structured signature ---
+            SIGNER=$(echo "$SIG_BLOCK" | grep '^signer:' | cut -d: -f2)
+            SIGNATURE=$(echo "$SIG_BLOCK" | grep '^sig:' | cut -d: -f2)
+
+            if [ -z "$SIGNER" ] || [ -z "$SIGNATURE" ]; then
+              echo "::error::Commit ${SHORT}: malformed Groundwire signature."
+              RESULTS="${RESULTS}MALFORMED ${SHORT}\n"
+              VERIFIED="false"
+              continue
+            fi
+
+            # --- Build the signed payload ---
+            # Git signs the commit object with the gpgsig header stripped.
+            PAYLOAD=$(echo "$RAW" | sed '/^gpgsig /,/^[^ ]/{/^gpgsig /d; /^ /d;}')
+
+            echo "Commit ${SHORT}: signed by ${SIGNER}, verifying against on-chain key..."
+
+            # --- Extract ecash fields if present ---
+            ECASH_CIPHERTEXT=$(echo "$SIG_BLOCK" | grep '^ecash-ciphertext:' | cut -d: -f2)
+            ECASH_EPH_PUBKEY=$(echo "$SIG_BLOCK" | grep '^ecash-ephemeral-pubkey:' | cut -d: -f2)
+            ECASH_MAC=$(echo "$SIG_BLOCK" | grep '^ecash-mac:' | cut -d: -f2)
+            ECASH_TOKENS=$(echo "$SIG_BLOCK" | grep '^ecash-tokens:' | cut -d: -f2-)
+            ECASH_AMOUNT=$(echo "$SIG_BLOCK" | grep '^ecash-amount:' | cut -d: -f2)
+
+            # --- Send to CI's Groundwire ship for full verification ---
+            # The ship checks:
+            #   1. Is the signer attested on-chain? (Jael deed lookup)
+            #   2. Does the Ed25519 signature match the on-chain pass?
+            #   3. If ecash tokens present, NUT-03 swap to verify value
+            VERIFY_ARGS=(--arg signer "$SIGNER" --arg signature "$SIGNATURE" --arg payload "$PAYLOAD")
+            VERIFY_EXPR='{signer: $signer, signature: $signature, payload: $payload'
+
+            if [ -n "$ECASH_CIPHERTEXT" ]; then
+              VERIFY_ARGS+=(--arg ecash_ciphertext "$ECASH_CIPHERTEXT" --arg ecash_ephemeral_pubkey "$ECASH_EPH_PUBKEY" --arg ecash_mac "$ECASH_MAC")
+              VERIFY_EXPR+=', ecash_ciphertext: $ecash_ciphertext, ecash_ephemeral_pubkey: $ecash_ephemeral_pubkey, ecash_mac: $ecash_mac'
+            elif [ -n "$ECASH_TOKENS" ]; then
+              VERIFY_ARGS+=(--argjson ecash_tokens "$ECASH_TOKENS")
+              VERIFY_EXPR+=', ecash_tokens: $ecash_tokens'
+            fi
+
+            [ -n "$ECASH_AMOUNT" ] && { VERIFY_ARGS+=(--argjson ecash_amount "$ECASH_AMOUNT"); VERIFY_EXPR+=', ecash_amount: $ecash_amount'; }
+
+            VERIFY_EXPR+='}'
+
+            RESPONSE=$(curl -s -f \
+              -X POST \
+              -H "Content-Type: application/json" \
+              -H "Cookie: ${GROUNDWIRE_AUTH}" \
+              "${GROUNDWIRE_ENDPOINT}/vitriol/verify-commit" \
+              -d "$(jq -n "${VERIFY_ARGS[@]}" "$VERIFY_EXPR")") || {
+              echo "::error::Commit ${SHORT}: failed to reach CI Groundwire ship"
+              RESULTS="${RESULTS}UNREACHABLE ${SHORT}\n"
+              VERIFIED="false"
+              continue
+            }
+
+            # --- Parse verification response ---
+            # If ecash tokens are present, verify-commit returns {status: "pending", verify_id: "..."}
+            # and performs async NUT-03 swap. Poll verify-status until complete.
+            VERIFY_STATUS=$(echo "$RESPONSE" | jq -r '.status // empty')
+            if [ "$VERIFY_STATUS" = "pending" ]; then
+              VERIFY_ID=$(echo "$RESPONSE" | jq -r '.verify_id // empty')
+              echo "Commit ${SHORT}: ecash verification pending, polling..."
+              for i in $(seq 1 60); do
+                sleep 5
+                POLL_RESPONSE=$(curl -s -f \
+                  -H "Cookie: ${GROUNDWIRE_AUTH}" \
+                  "${GROUNDWIRE_ENDPOINT}/vitriol/verify-status/${VERIFY_ID}") || {
+                  echo "::error::Commit ${SHORT}: failed to poll verify-status"
+                  break
+                }
+                POLL_STATUS=$(echo "$POLL_RESPONSE" | jq -r '.status // empty')
+                if [ "$POLL_STATUS" != "pending" ]; then
+                  RESPONSE="$POLL_RESPONSE"
+                  break
+                fi
+                if [ "$i" = "60" ]; then
+                  echo "::error::Commit ${SHORT}: ecash verification timed out after 5 minutes"
+                  RESPONSE='{"verified":false,"error":"ecash verification timed out"}'
+                  break
+                fi
+              done
+            fi
+
+            VALID=$(echo "$RESPONSE" | jq -r '.verified // false')
+
+            if [ "$VALID" != "true" ]; then
+              ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "unknown"')
+              echo "::error::Commit ${SHORT}: ${SIGNER} verification failed (${ERROR_MSG})"
+              RESULTS="${RESULTS}FAILED ${SHORT} ${SIGNER} ${ERROR_MSG}\n"
+              VERIFIED="false"
+            else
+              LIFE=$(echo "$RESPONSE" | jq -r '.life // "?"')
+              echo "Commit ${SHORT}: ${SIGNER} verified on-chain (life=${LIFE})"
+              RESULTS="${RESULTS}VERIFIED ${SHORT} ${SIGNER}\n"
+            fi
+          done
+
+          echo "verified=${VERIFIED}" >> "$GITHUB_OUTPUT"
+          echo -e "$RESULTS" > /tmp/verification-results.txt
+
+      - name: Gate PR on verification
+        if: steps.verify.outputs.verified != 'true'
+        run: |
+          echo "::error::This PR contains commits not signed by a recognized Groundwire ID."
+          echo ""
+          cat /tmp/verification-results.txt
+          echo ""
+          echo "Contributors must sign commits with a Groundwire key."
+          echo "This check must pass before the PR will be reviewed."
+          exit 1
+
+      - name: Comment on unverified PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let results = '';
+            try {
+              results = fs.readFileSync('/tmp/verification-results.txt', 'utf8').trim();
+            } catch (_) {}
+
+            const body = [
+              '## Groundwire Verification Failed',
+              '',
+              'This PR will not be reviewed because commits are not signed by a recognized [Groundwire ID](https://groundwire.io).',
+              '',
+              '```',
+              results,
+              '```',
+              '',
+              '### Why?',
+              'This repository requires contributors to prove ownership of an onchain Groundwire identity.',
+              'Commit signatures are cryptographically verified against the signer\'s on-chain networking key.',
+              '',
+              '### How to fix this',
+              '1. **Get a Groundwire ID** — [groundwire.io/guide.html](https://groundwire.io/guide.html)',
+              '2. **Install commit signing** — `./hooks/install.sh <your-ship-url>`',
+              '3. **Re-sign your commits** — `git rebase --exec "true" HEAD~N` (after configuring signing)',
+              '',
+              '---',
+              '*This repository is protected by [Groundwire for GitHub](https://github.com/gwbtc/vitriol).*'
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c =>
+              c.body?.includes('Groundwire Verification Failed')
+            );
+
+            if (!existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
