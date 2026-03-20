@@ -106,6 +106,41 @@ Type `@` in Claude Code to see available Resources.
 
 You can ask your LLM to add new Resources by providing an `https://` URI to a public webpage or a `beam://` URI to a file in Clay.
 
+## Contributing
+
+This repo requires commits to be signed with a [Groundwire](https://groundwire.network) identity. PRs with unsigned commits will be rejected by CI.
+
+### Setup commit signing
+
+You need an Urbit ship running the `%vitriol` agent.
+
+**Quick install:**
+
+```bash
+./hooks/install.sh <your-ship-url>/vitriol "<auth-cookie>"
+```
+
+**Manual install:**
+
+```bash
+git config gpg.program /path/to/hooks/groundwire-sign
+git config commit.gpgsign true
+git config groundwire.sign-endpoint <your-ship-url>/vitriol
+git config groundwire.sign-token "<auth-cookie>"
+```
+
+Once configured, all commits will be automatically signed with your ship's Ed25519 networking key. The CI verifies signatures against on-chain keys via [vitriol.bot](https://vitriol.bot).
+
+### Re-signing existing commits
+
+If you have unsigned commits on a branch:
+
+```bash
+git rebase --exec "true" HEAD~N
+```
+
+(where N is the number of commits to re-sign)
+
 ## Development
 
 ### Build Commands
