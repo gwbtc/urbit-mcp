@@ -653,8 +653,10 @@
       (snoc out-headers u.oauth-hdr)
     ::  openapi mode: make direct REST API call
     ?:  =(%openapi mode.u.srv)
+      ~&  [%mcp-proxy %openapi-call sid real-name]
       =/  spec=(unit json)  (~(get by spec-cache) `@tas`sid)
       ?~  spec
+        ~&  [%mcp-proxy %spec-not-cached sid]
         :_  this
         %-  give-http  :^  eyre-id  500
         ~[cors ['content-type' 'application/json']]
@@ -662,10 +664,12 @@
       =/  op=(unit [path=@t method=@t operation=json])
         (find-operation u.spec real-name)
       ?~  op
+        ~&  [%mcp-proxy %op-not-found sid real-name]
         :_  this
         %-  give-http  :^  eyre-id  404
         ~[cors ['content-type' 'application/json']]
         (some (as-octs:mimes:html '{"error":"operation not found in spec"}'))
+      ~&  [%mcp-proxy %found-op path.u.op method.u.op]
       ::  extract arguments from params
       =/  args=json
         =/  a=(unit json)  ?.(?=(%o -.params) ~ (~(get by p.params) 'arguments'))
@@ -677,9 +681,13 @@
         =/  base-url=@t
           ?:  !=('' url.u.srv)  url.u.srv
           (get-spec-base-url u.spec)
+        ~&  [%mcp-proxy %base-url base-url]
         =/  base-with-path=@t  (build-api-url base-url path.u.op args)
+        ~&  [%mcp-proxy %base-with-path base-with-path]
         =/  qs=@t  (build-all-args-query args path-params)
+        ~&  [%mcp-proxy %query-string qs]
         (cat 3 base-with-path qs)
+      ~&  [%mcp-proxy %api-url api-url]
       ::  build body for POST/PUT/PATCH
       =/  req-method=method:http
         ?+  method.u.op  %'GET'
@@ -1380,6 +1388,10 @@
   =?  base-t  &(!=(~ base-t) =('/' (rear base-t)))
     (snip base-t)
   =/  path-t=tape  (trip path-template)
+  ::  ensure a '/' separator between base and path. discovery spec
+  ::  paths (e.g. "users/{userId}/profile") omit the leading slash.
+  =?  path-t  &(!=(~ path-t) !=('/' -.path-t))
+    ['/' path-t]
   =/  result=tape  base-t
   =/  i=@ud  0
   |-
@@ -1474,6 +1486,8 @@
     |=  [key=@t val=json]
     ^-  (unit @t)
     ?:  (~(has in exclude) key)  ~
+    ::  skip null values — json `~` is the atom 0 and crashes -.val
+    ?~  val  ~
     =/  v=@t
       ?+  -.val  ''
         %s  p.val
