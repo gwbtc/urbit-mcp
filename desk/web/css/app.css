@@ -826,6 +826,14 @@ button {
   line-height: 1;
 }
 
+.card-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--paper-mute);
+  text-transform: lowercase;
+}
+
 .card-badges {
   display: inline-flex;
   gap: var(--s-1);

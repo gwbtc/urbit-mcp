@@ -609,9 +609,10 @@ var App = {
         meta += '<div class="meta-row"><div class="meta-key">HEADERS</div><div class="meta-val">' + tags + '</div></div>';
       }
       if (s.oauthProvider) {
-        var oauthBadge = s.authenticated
-          ? '<span class="badge connected">' + this.esc(s.oauthProvider) + ' · linked</span>'
-          : '<span class="badge disconnected">' + this.esc(s.oauthProvider) + ' · not linked</span>';
+        var prov = this.oauthProviders.find(function(p) { return p.id === s.oauthProvider; });
+        var oauthBadge = prov && prov.hasGrant
+          ? '<span class="badge connected">' + this.esc(s.oauthProvider) + ' · connected</span>'
+          : '<span class="badge disconnected">' + this.esc(s.oauthProvider) + ' · not connected</span>';
         meta += '<div class="meta-row"><div class="meta-key">OAUTH</div><div class="meta-val">' + oauthBadge + '</div></div>';
       }
 
@@ -737,7 +738,7 @@ var App = {
         '<div class="card-row">' +
           '<div class="card-identity">' +
             '<div class="card-name">' + this.esc(p.id) + '</div>' +
-            '<div class="card-id">oauth2 + pkce</div>' +
+            '<div class="card-sub">oauth2 + pkce</div>' +
           '</div>' +
           '<div class="card-badges">' +
             '<span class="badge ' + (connected ? 'connected' : 'disconnected') + '">' +
