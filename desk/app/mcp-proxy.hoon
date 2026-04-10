@@ -1343,26 +1343,31 @@
   |=  [spec=json op-id=@t]
   ^-  (unit [path=@t method=@t operation=json])
   =/  resources=json  (get-json-field spec 'resources')
+  ?~  resources  ~
   ?.  ?=(%o -.resources)  ~
   (search-discovery-resources resources op-id)
 ::
 ++  search-discovery-resources
   |=  [resources=json op-id=@t]
   ^-  (unit [path=@t method=@t operation=json])
+  ?~  resources  ~
   ?.  ?=(%o -.resources)  ~
   =/  items=(list [@t json])  ~(tap by p.resources)
   |-
   ?~  items  ~
   =/  [rname=@t robj=json]  i.items
+  ?~  robj  $(items t.items)
   ?.  ?=(%o -.robj)  $(items t.items)
   ::  check methods
   =/  methods=json  (get-json-field robj 'methods')
   =/  found=(unit [path=@t method=@t operation=json])
+    ?~  methods  ~
     ?.  ?=(%o -.methods)  ~
     =/  ml=(list [@t json])  ~(tap by p.methods)
     |-
     ?~  ml  ~
     =/  [mname=@t mobj=json]  i.ml
+    ?~  mobj  $(ml t.ml)
     ?.  ?=(%o -.mobj)  $(ml t.ml)
     =/  mid=@t  (get-json-string mobj 'id')
     ?.  =(mid op-id)  $(ml t.ml)
@@ -1375,6 +1380,8 @@
   ::  recurse sub-resources
   =/  sub=json  (get-json-field robj 'resources')
   =/  sub-found=(unit [path=@t method=@t operation=json])
+    ?~  sub  ~
+    ?.  ?=(%o -.sub)  ~
     (search-discovery-resources sub op-id)
   ?^  sub-found  sub-found
   $(items t.items)
