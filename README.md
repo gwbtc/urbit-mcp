@@ -2,6 +2,22 @@
 
 A general-purpose Model Context Protocol interface for Urbit.
 
+The `%mcp` desk ships as a single integrated control plane with three pieces:
+
+1. **Native MCP server** at `/mcp` — runs Hoon-defined tools, prompts and
+   resources directly on your ship.
+2. **MCP proxy** at `/apps/mcp/mcp` — aggregates the native server plus any
+   number of remote MCP / OpenAPI / Google Discovery upstreams behind a single
+   endpoint, with per-server tool filtering and OAuth 2.0 + PKCE token
+   management. OpenAPI and Discovery spec docs are dynamically converted 
+   to MCP tool calls.
+3. **Operator console** at `/apps/mcp/` — a web UI for configuring upstreams,
+   OAuth providers, the API key, and inspecting tools.
+
+Both `/mcp` and `/apps/mcp/mcp` authenticate with the same `X-Api-Key` header.
+A random key is generated on first install and can be regenerated, set, or
+cleared from the operator console.
+
 ## Developer Setup
 
 ### 1. Build and Install
@@ -16,11 +32,13 @@ Create and mount the desk on your Urbit ship:
 > |mount %mcp
 ```
 
-In the `urbit-mcp` folder, run the [build script](build.sh). By default this will install dependencies into `/dist` in this folder. Use the `-p` argument to additionally copy the %mcp source and its dependencies into your ship's desk. This script will take a minute if it's your first time running it.
+In the project folder, run the [build script](build.sh). By default this will
+install dependencies into `/dist` in this folder. Use the `-p` argument to
+additionally copy the source and its dependencies into your ship's desk. This
+script will take a minute if it's your first time running it.
 
 ```bash
-$ cd urbit-mcp
-$ build.sh -p ~/path/to/zod/mcp
+$ ./build.sh -p ~/path/to/zod/mcp
 ```
 
 ```dojo
@@ -28,47 +46,57 @@ $ build.sh -p ~/path/to/zod/mcp
 > |install our %mcp
 ```
 
-### 2. Authentication Setup
+This installs four agents on your ship:
 
-Get your ship's web login code from the Dojo:
+- `%mcp-server` — native MCP server bound to `/mcp`
+- `%mcp-proxy` — aggregator bound to `/apps/mcp/api` and `/apps/mcp/mcp`
+- `%mcp-fileserver` — serves the operator UI at `/apps/mcp/`
+- `%oauth` — OAuth 2.0 + PKCE provider/grant manager
 
-```dojo
-> +code
-lidlut-tabwed-pillex-ridrup
-~zod:dojo>
-```
+### 2. Open the operator console
 
-Authenticate and get session cookie:
+Visit `http://localhost:PORT/apps/mcp/`.
 
-```bash
-curl -i http://localhost:80/~/login -X POST -d "password=lidlut-tabwed-pillex-ridrup"
-```
+The console has three tabs:
 
-Extract the cookie from the `set-cookie` header, which will look like this:
-
-```
-urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm
-```
+- **Endpoint** — the proxy aggregate URL and your `X-Api-Key`. Buttons to
+  generate a random key, set a custom one, copy, or clear it. The page also
+  shows a `claude mcp add` snippet pre-filled with your ship name and key.
+- **Upstreams** — configured remote servers. The native server is registered
+  automatically and tagged `BUILT-IN`. Add your own MCP servers, OpenAPI REST
+  APIs, or Google Discovery documents. Each upstream can be linked to an OAuth
+  provider for automatic token injection, and you can allow- or block-list
+  individual tools.
+- **OAuth** — manage OAuth 2.0 + PKCE providers. Connect / disconnect grants,
+  edit endpoints, store client secrets (the secret is never returned to
+  the browser; leaving the field blank in an edit preserves the saved value).
+  OAuth providers can be assigned to upstreams and automatically renew
+  expired sessions.
 
 ### 3A. Register with Claude
 
-Add the MCP server to Claude using HTTP transport:
+In the **Endpoint** tab, click `GEN` to mint an API key (or `SET` to use your
+own). Then copy the snippet shown under `CLAUDE CLI`, which will look like:
 
 ```bash
-claude mcp add --transport http zod http://localhost:80/mcp --header "Cookie: urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm" --scope user
+claude mcp add --transport http zod \
+  http://localhost:8080/apps/mcp/mcp \
+  --header "X-Api-Key: <your-key>"
 ```
+
 ### 3B. Register with Codex
 
-Codex requires the `mcp-proxy` python package to function. Install with `uvx mcp-proxy`, then append this to your `~/.codex/config.toml`:
+Codex needs the `mcp-proxy` python bridge. Install with `uvx mcp-proxy`, then
+append to `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.fen]
+[mcp_servers.zod]
 command = "uvx"
 args = [
   "mcp-proxy",
   "--transport", "streamablehttp",
-  "--headers", "Cookie", "urbauth-~your-ship=0v2.20fhu.t7ki1.cftjr.3s8bv.d9i5l",
-  "http://localhost:80/mcp"
+  "--headers", "X-Api-Key", "<your-key>",
+  "http://localhost:8080/apps/mcp/mcp"
 ]
 ```
 
