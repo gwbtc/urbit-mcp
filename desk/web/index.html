@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URBIT MCP · LLM CONTROL PLANE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/apps/mcp/css/app.css">
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <main class="console">
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!--  MASTHEAD                                                             -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+    <header class="masthead">
+      <div class="masthead-rail">
+        <div class="brand">
+          <span class="brand-mark">◢</span>
+          <span class="brand-text">URBIT&nbsp;MCP</span>
+        </div>
+      </div>
+
+      <h1 class="display-title">
+        <span class="display-line">Model Context</span>
+        <span class="display-line display-line-italic">Protocol gateway</span>
+      </h1>
+
+      <p class="masthead-blurb">
+        Aggregated local & remote MCP endpoints with central auth caching
+      </p>
+
+      <div class="status-strip">
+        <div class="status-cell">
+          <span class="status-label">SHIP</span>
+          <span class="status-value" id="stat-ship">—</span>
+        </div>
+        <div class="status-cell">
+          <span class="status-label">UPSTREAMS</span>
+          <span class="status-value" id="stat-upstreams">—</span>
+        </div>
+        <div class="status-cell">
+          <span class="status-label">OAUTH</span>
+          <span class="status-value" id="stat-oauth">—</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!--  SECTION TABS                                                         -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+    <nav class="section-tabs" role="tablist" aria-label="Sections">
+      <button type="button" class="section-tab is-active" data-section="endpoint" role="tab">
+        <span class="section-tab-num">01</span>
+        <span class="section-tab-label">Endpoint</span>
+      </button>
+      <button type="button" class="section-tab" data-section="upstreams" role="tab">
+        <span class="section-tab-num">02</span>
+        <span class="section-tab-label">Upstreams</span>
+        <span class="section-tab-count" id="tab-count-upstreams">0</span>
+      </button>
+      <button type="button" class="section-tab" data-section="oauth" role="tab">
+        <span class="section-tab-num">03</span>
+        <span class="section-tab-label">OAuth</span>
+        <span class="section-tab-count" id="tab-count-oauth">0</span>
+      </button>
+    </nav>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!--  ENDPOINT                                                             -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+    <section class="panel section-pane is-active" id="section-endpoint" data-pane="endpoint" role="tabpanel">
+      <p class="section-intro">
+        One URL for every MCP-compatible client. All configured upstreams are aggregated here.
+        Requests authenticate with an <code class="inline-code">X-Api-Key</code> header.
+      </p>
+
+      <div class="endpoint-sheet">
+        <div class="sheet-row">
+          <div class="sheet-label">URL</div>
+          <div class="sheet-value">
+            <code id="agg-url">—</code>
+            <button type="button" class="copy-btn" data-copy="agg-url" aria-label="Copy URL">
+              <span class="copy-btn-label">COPY</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sheet-row" id="agg-key-row">
+          <div class="sheet-label">API KEY</div>
+          <div class="sheet-value">
+            <code id="agg-key">— not set —</code>
+            <div class="key-btns">
+              <button type="button" class="copy-btn" id="btn-regen-key" title="Generate random key">
+                <span class="copy-btn-label">GEN</span>
+              </button>
+              <button type="button" class="copy-btn" id="btn-set-key" title="Set a custom key">
+                <span class="copy-btn-label">SET</span>
+              </button>
+              <button type="button" class="copy-btn" data-copy="agg-key" aria-label="Copy key">
+                <span class="copy-btn-label">COPY</span>
+              </button>
+              <button type="button" class="copy-btn danger-btn" id="btn-clear-key" title="Clear key (disables endpoint)">
+                <span class="copy-btn-label">CLR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sheet-divider"></div>
+
+        <div class="sheet-command">
+          <div class="sheet-label">CLAUDE CLI</div>
+          <div class="cmd-wrap">
+            <pre id="endpoint-example" class="cmd-block"></pre>
+            <button type="button" class="copy-btn cmd-copy" data-copy="endpoint-example">
+              <span class="copy-btn-label">COPY</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!--  UPSTREAMS                                                            -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+    <section class="panel section-pane" id="section-upstreams" data-pane="upstreams" role="tabpanel">
+      <p class="section-intro">
+        Remote MCP servers and REST APIs reachable through this proxy.
+        Each can be linked to an OAuth provider for automatic token injection.
+      </p>
+
+      <details class="drawer">
+        <summary class="drawer-handle">
+          <span class="drawer-plus">+</span>
+          <span class="drawer-text">New upstream</span>
+        </summary>
+        <form id="add-form" class="form-sheet" autocomplete="off">
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">ID</span>
+              <input type="text" name="id" placeholder="my-server" pattern="[a-z][a-z0-9]*(-[a-z0-9]+)*" required>
+              <span class="field-hint">@tas format · lowercase, digits, hyphens</span>
+            </label>
+            <label class="field">
+              <span class="field-label">NAME</span>
+              <input type="text" name="name" placeholder="My MCP Server" required>
+              <span class="field-hint">display name</span>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">MODE</span>
+              <select name="mode" id="add-mode" onchange="App.toggleSchemaUrl('add')">
+                <option value="proxy">Proxy — MCP Server</option>
+                <option value="openapi">OpenAPI — REST API</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">OAUTH PROVIDER</span>
+              <select name="oauth-provider" id="add-oauth-select" class="oauth-select"><option value="">— none —</option></select>
+              <span class="field-hint">optional</span>
+            </label>
+          </div>
+
+          <label class="field field-full">
+            <span class="field-label">URL</span>
+            <input type="url" name="url" id="add-url" placeholder="https://example.com/mcp" required>
+            <span class="field-hint" id="add-url-hint">Upstream MCP server endpoint</span>
+          </label>
+
+          <label class="field field-full" id="add-schema-row" style="display:none">
+            <span class="field-label">SCHEMA URL</span>
+            <input type="url" name="schema-url" placeholder="https://api.example.com/openapi.json">
+            <span class="field-hint">OpenAPI or Google Discovery document · JSON</span>
+          </label>
+
+          <div class="form-section">
+            <div class="form-section-label">CUSTOM HEADERS</div>
+            <div id="add-headers" class="header-list"></div>
+            <button type="button" class="ghost-btn" onclick="App.addHeaderRow(document.getElementById('add-headers'))">
+              + Add header
+            </button>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Commit upstream</button>
+          </div>
+        </form>
+      </details>
+
+      <div id="servers" class="server-list"></div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!--  OAUTH                                                                -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+    <section class="panel section-pane" id="section-oauth" data-pane="oauth" role="tabpanel">
+      <p class="section-intro">
+        Credentials for upstreams that need authentication. Tokens are stored on your ship
+        and refreshed automatically before expiry.
+      </p>
+
+      <details class="drawer">
+        <summary class="drawer-handle">
+          <span class="drawer-plus">+</span>
+          <span class="drawer-text">New provider</span>
+        </summary>
+        <form id="oauth-add-form" class="form-sheet" autocomplete="off">
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">ID</span>
+              <input type="text" name="id" placeholder="x" pattern="[a-z][a-z0-9]*(-[a-z0-9]+)*" required>
+              <span class="field-hint">@tas format</span>
+            </label>
+            <label class="field">
+              <span class="field-label">CLIENT ID</span>
+              <input type="text" name="client-id" required>
+            </label>
+          </div>
+
+          <label class="field field-full">
+            <span class="field-label">CLIENT SECRET</span>
+            <input type="password" name="client-secret" required>
+          </label>
+
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">AUTH URL</span>
+              <input type="url" name="auth-url" placeholder="https://provider.com/oauth/authorize" required>
+            </label>
+            <label class="field">
+              <span class="field-label">TOKEN URL</span>
+              <input type="url" name="token-url" placeholder="https://provider.com/oauth/token" required>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">REDIRECT URI</span>
+              <input type="url" name="redirect-uri" required>
+              <span class="field-hint">must match provider config</span>
+            </label>
+            <label class="field">
+              <span class="field-label">REVOKE URL</span>
+              <input type="url" name="revoke-url" placeholder="(optional)">
+            </label>
+          </div>
+
+          <label class="field field-full">
+            <span class="field-label">SCOPES</span>
+            <input type="text" name="scopes" placeholder="read write offline.access">
+            <span class="field-hint">space-separated</span>
+          </label>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Commit provider</button>
+          </div>
+        </form>
+      </details>
+
+      <div id="oauth-providers" class="oauth-list"></div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!--  FOOTER                                                               -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+    <footer class="console-foot">
+      <span class="foot-brand">◢&nbsp;URBIT&nbsp;MCP&nbsp;</span>
+      <span class="foot-div">——</span>
+      <span>LLM Control Plane</span>
+      <span class="foot-div">——</span>
+      <span class="foot-ship" id="foot-ship">—</span>
+    </footer>
+
+  </main>
+
+  <script src="/apps/mcp/js/api.js"></script>
+  <script src="/apps/mcp/js/app.js"></script>
+</body>
+</html>

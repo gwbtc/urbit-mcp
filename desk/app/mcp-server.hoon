@@ -39,6 +39,7 @@
 +$  card  card:agent:gall
 +$  versioned-state
   $%  state-0
+      state-1
   ==
 +$  state-0
   $:  %0
@@ -46,10 +47,25 @@
       prompts=(set prompt:mcp)
       resources=(set resource:mcp)
   ==
++$  state-1
+  $:  %1
+      tools=(set tool:mcp)
+      prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
+      auth-token=@t               ::  auto-generated x-api-key for /mcp
+  ==
+::  extract x-api-key header value (case-insensitive)
+++  get-api-key
+  |=  headers=(list [key=@t value=@t])
+  ^-  (unit @t)
+  |-  ^-  (unit @t)
+  ?~  headers  ~
+  ?:  =((cass (trip key.i.headers)) "x-api-key")  `value.i.headers
+  $(headers t.headers)
 --
 %-  agent:dbug
 ^-  agent:gall
-=|  state-0
+=|  state-1
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
@@ -67,11 +83,19 @@
   |=  =vase
   ^-  (quip card _this)
   =/  old  !<(versioned-state vase)
+  =/  new=state-1
+    ?-    -.old
+        %1  old
+        %0
+      :*  %1
+          tools.old
+          prompts.old
+          resources.old
+          ''                          ::  await mcp-proxy poke
+      ==
+    ==
   :-  ~
-  ?-    -.old
-      %0
-    this(state old)
-  ==
+  this(state new)
 ::
 ++  on-init
   ^-  (quip card _this)
@@ -109,6 +133,12 @@
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
       ::
+          %set-auth-token
+        ::  poked by mcp-proxy to keep keys in sync
+        ?>  =(src our):bowl
+        =.  auth-token  !<(@t vase)
+        `this
+      ::
           ?(%add-tool %add-prompt %add-resource)
         ?>  =(src our):bowl
         ::  XX send listChanged notification
@@ -125,9 +155,17 @@
   ++  handle-req
     |=  [eyre-id=@ta req=inbound-request:eyre]
     ^-  (quip card _this)
-    ?.  authenticated.req
+    ::  auth: require x-api-key header matching auth-token
+    ?:  =('' auth-token)
       :_  this
-      (send-event eyre-id (internal:error:rpc:ml 'Authentication required' ~))
+      (send-event eyre-id (internal:error:rpc:ml 'Server not configured' ~))
+    =/  supplied=(unit @t)  (get-api-key header-list.request.req)
+    ?~  supplied
+      :_  this
+      (send-event eyre-id (internal:error:rpc:ml 'Missing x-api-key header' ~))
+    ?.  =(u.supplied auth-token)
+      :_  this
+      (send-event eyre-id (internal:error:rpc:ml 'Invalid x-api-key' ~))
     ?+  method.request.req
       [(simple-response eyre-id 405 ~) this]
     ::
@@ -469,6 +507,11 @@
     ::  read prompt definitions
     [%x %prompts ~]
       ``json+!>((mcp-prompts-to-json:ml prompts))
+    ::
+    ::  .^(@t %gx /=mcp-server=/auth-token/noun)
+    ::  read the auto-generated auth token (for internal use)
+    [%x %auth-token ~]
+      ``noun+!>(auth-token)
   ==
 ++  on-arvo
   |=  [=(pole knot) =sign-arvo]
