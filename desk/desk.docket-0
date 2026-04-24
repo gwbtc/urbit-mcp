@@ -1,0 +1,9 @@
+:~  title+'Urbit MCP'
+    info+'Allow LLM ship piloting & proxy remote MCP servers through your ship'
+    color+0x7c.3aed
+    version+[0 2 0]
+    website+''
+    license+'MIT'
+    base+'mcp'
+    site+/apps/mcp
+==
