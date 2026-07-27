@@ -1381,6 +1381,25 @@
               :-  'result'
               ?-    response
                   [%result %structured *]
+                ::  structuredContent must be a JSON object or
+                ::  some clients will fail silently
+                ?.  ?=(%o -.json.response)
+                  %-  pairs:enjs:format
+                  :~  ['isError' b+.y]
+                      :-  'content'
+                      :-  %a
+                      :~  %-  pairs:enjs:format
+                          :~  ['type' s+'text']
+                              :-  'text'
+                              :-  %s
+                              %-  en:json:html
+                              %-  frond:enjs:format
+                              :-  'error'
+                              :-  %s
+                              'structuredContent output is not a valid JSON object'
+                          ==
+                      ==
+                  ==
                 %-  pairs:enjs:format
                 :~  :-  'content'
                     :-  %a
