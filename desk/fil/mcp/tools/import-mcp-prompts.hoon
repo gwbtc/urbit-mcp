@@ -56,13 +56,29 @@
       ^-  (unit prompt:mcp)
       ?:  %+  lien  before
           |=  old=prompt:mcp
-          =(title.new title.old)
+          =(name.new name.old)
+        ~
+      `new
+    ::
+    ::  refreshed: same name as before, but the entry changed
+    =/  refreshed=(list prompt:mcp)
+      %+  murn  after
+      |=  new=prompt:mcp
+      ^-  (unit prompt:mcp)
+      ?.  %+  lien  before
+          |=  old=prompt:mcp
+          &(=(name.new name.old) !=(new old))
         ~
       `new
     %-  pure:m
     !>  ^-  response:tool:mcp
     :-  %result
     :-  %structured
-    %-  frond:enjs:format
-    [%imported-prompts a+(turn added |=(=prompt:mcp s+name.prompt))]
+    %-  pairs:enjs:format
+    %-  zing
+    :~  :~  [%imported-prompts a+(turn added |=(=prompt:mcp s+name.prompt))]
+        ==
+        ?~  refreshed  ~
+        :~  [%refreshed-prompts a+(turn refreshed |=(=prompt:mcp s+name.prompt))]
+    ==  ==
 ==

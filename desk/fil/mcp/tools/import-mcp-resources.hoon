@@ -59,10 +59,26 @@
           =(uri.new uri.old)
         ~
       `new
+    ::
+    ::  refreshed: same uri as before, but the entry changed
+    =/  refreshed=(list resource:mcp)
+      %+  murn  after
+      |=  new=resource:mcp
+      ^-  (unit resource:mcp)
+      ?.  %+  lien  before
+          |=  old=resource:mcp
+          &(=(uri.new uri.old) !=(new old))
+        ~
+      `new
     %-  pure:m
     !>  ^-  response:tool:mcp
     :-  %result
     :-  %structured
-    %-  frond:enjs:format
-    [%imported-resources a+(turn added |=(=resource:mcp s+uri.resource))]
+    %-  pairs:enjs:format
+    %-  zing
+    :~  :~  [%imported-resources a+(turn added |=(=resource:mcp s+uri.resource))]
+        ==
+        ?~  refreshed  ~
+        :~  [%refreshed-resources a+(turn refreshed |=(=resource:mcp s+uri.resource))]
+    ==  ==
 ==

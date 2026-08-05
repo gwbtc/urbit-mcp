@@ -392,7 +392,7 @@
                      ?:  %+  lien
                            imported
                          |=  new=prompt:mcp
-                         =(title.new title.old)
+                         =(name.new name.old)
                          ~
                        `old
           ==
@@ -475,7 +475,7 @@
                          ~(tap in prompts)
                        |=  old=prompt:mcp
                        ^-  (unit prompt:mcp)
-                       ?:  =(title.new title.old)
+                       ?:  =(name.new name.old)
                          ~
                        `old
             ==

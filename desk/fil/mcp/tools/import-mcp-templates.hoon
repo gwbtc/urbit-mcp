@@ -59,10 +59,28 @@
           =(name.new name.old)
         ~
       `new
+    ::
+    ::  refreshed: same name as before, but the entry changed
+    =/  refreshed=(list template:resource:mcp)
+      %+  murn  after
+      |=  new=template:resource:mcp
+      ^-  (unit template:resource:mcp)
+      ?.  %+  lien  before
+          |=  old=template:resource:mcp
+          &(=(name.new name.old) !=(new old))
+        ~
+      `new
     %-  pure:m
     !>  ^-  response:tool:mcp
     :-  %result
     :-  %structured
-    %-  frond:enjs:format
-    [%imported-resource-templates a+(turn added |=(=template:resource:mcp s+uri-template.template))]
+    %-  pairs:enjs:format
+    %-  zing
+    :~  :~  :-  %imported-resource-templates
+            a+(turn added |=(=template:resource:mcp s+uri-template.template))
+        ==
+        ?~  refreshed  ~
+        :~  :-  %refreshed-resource-templates
+            a+(turn refreshed |=(=template:resource:mcp s+uri-template.template))
+    ==  ==
 ==

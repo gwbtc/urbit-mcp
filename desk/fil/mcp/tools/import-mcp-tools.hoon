@@ -59,10 +59,26 @@
           =(name.new name.old)
         ~
       `new
+    ::
+    ::  refreshed: same name as before, but the entry changed
+    =/  refreshed=(list tool:mcp)
+      %+  murn  after
+      |=  new=tool:mcp
+      ^-  (unit tool:mcp)
+      ?.  %+  lien  before
+          |=  old=tool:mcp
+          &(=(name.new name.old) !=(new old))
+        ~
+      `new
     %-  pure:m
     !>  ^-  response:tool:mcp
     :-  %result
     :-  %structured
-    %-  frond:enjs:format
-    [%imported-tools a+(turn added |=(=tool:mcp s+name.tool))]
+    %-  pairs:enjs:format
+    %-  zing
+    :~  :~  [%imported-tools a+(turn added |=(=tool:mcp s+name.tool))]
+        ==
+        ?~  refreshed  ~
+        :~  [%refreshed-tools a+(turn refreshed |=(=tool:mcp s+name.tool))]
+    ==  ==
 ==
