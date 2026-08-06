@@ -18,12 +18,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Zig 0.15.2
-        run: |
-          curl -LO "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz"
-          tar xf zig-x86_64-linux-0.15.2.tar.xz
-          ZIG_DIR=zig-x86_64-linux-0.15.2
-          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+      - name: Set up Zig 0.15.2
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          cache-key: deploy-desk
 
       - name: Build desk
         run: zig build
