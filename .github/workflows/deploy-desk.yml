@@ -50,4 +50,4 @@ jobs:
 
       - name: Commit desk on ship
         run: |
-          ssh ${SHIP_HOST} "screen -x ${SCREEN} '|commit %${DESK}\n'"
+          ssh ${SHIP_HOST} "screen -S ${SCREEN} -p 0 -X stuff $'|commit %${DESK}\r'"
