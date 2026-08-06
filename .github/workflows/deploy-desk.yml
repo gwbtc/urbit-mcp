@@ -9,7 +9,7 @@ env:
   SCREEN:    sponsor
   SHIP_HOST: root@143.198.70.9
   PIER_PATH: /root/.local/share/groundwire-alpha
-  DIST_PIER: watwyd-bannyt-parmep-sivpes--motweb-dovfet-nilrec-daplyd
+  DIST_PIER: ${{ vars.SPONSOR_URBIT_ID_NO_TILDE }}
 
 jobs:
   deploy:
@@ -34,7 +34,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SPONSOR_VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 143.198.70.9 >> ~/.ssh/known_hosts
 
