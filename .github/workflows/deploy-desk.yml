@@ -6,7 +6,7 @@ on:
 
 env:
   DESK:      mcp
-  TMUX_TAB:  sponsor
+  SCREEN:    sponsor
   SHIP_HOST: root@143.198.70.9
   PIER_PATH: /root/.local/share/groundwire-alpha
   DIST_PIER: watwyd-bannyt-parmep-sivpes--motweb-dovfet-nilrec-daplyd
@@ -48,4 +48,4 @@ jobs:
 
       - name: Commit desk on ship
         run: |
-          ssh ${SHIP_HOST} "tmux send-keys -t ${TMUX_TAB} '|commit %${DESK}' Enter"
+          ssh ${SHIP_HOST} "screen -x ${SCREEN} '|commit %${DESK}\n'"
