@@ -237,6 +237,34 @@
     (trip (en:json:html json))
 ::
 +$  card  card:agent:gall
+::
+::  +install-features-card: fire /ted/install-features over every file
+::  under /fil/mcp, registering tools, prompts, resources, and templates.
+::  Imports replace entries by name, so re-firing this card is idempotent;
+::  entries added at runtime under other names are untouched.
+::
+++  install-features-card
+  |=  [our=ship =desk now=@da]
+  ^-  card
+  :*  %pass  ~
+      %arvo  %k
+      %fard  desk
+      %install-features
+      :-  %noun
+      !>  ^-  (list beam)
+      %+  turn
+        .^  (list path)
+            %ct
+            /(scot %p our)/[desk]/(scot %da now)/fil/mcp
+        ==
+      |=  pax=path
+      ^-  beam
+      %-  need
+      %-  de-beam
+      %+  welp
+        /(scot %p our)/[desk]/(scot %da now)
+      pax
+  ==
 +$  versioned-state
   $%  state-0
   ==
@@ -280,10 +308,16 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
+  ::  Re-run install-features on every load so tool, prompt, resource,
+  ::  and template files brought in by a desk update register without a
+  ::  manual %fard. Re-firing is idempotent: imports replace by name.
+  ::
+  =/  reimport-card=card
+    (install-features-card our.bowl q.byk.bowl now.bowl)
   ?-    -.old
       %0
     :_  this(state [%0 +.old])
-    :~  well-known-card  oauth-card  ==
+    :~  well-known-card  oauth-card  reimport-card  ==
   ==
 ::
 ++  on-init
@@ -312,25 +346,8 @@
           %arvo  %e  %connect
           [[~ ~['oauth']] dap.bowl]
       ==
-      :*  %pass  ~
-          %arvo  %k
-          %fard  q.byk.bowl
-          %install-features
-          :-  %noun
-          !>  ^-  (list beam)
-          %+  turn
-            .^  (list path)
-                %ct
-                /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)/fil/mcp
-            ==
-          |=  pax=path
-          ^-  beam
-          %-  need
-          %-  de-beam
-          %+  welp
-            /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)
-          pax
-  ==  ==
+      (install-features-card our.bowl q.byk.bowl now.bowl)
+  ==
 ::
 ++  on-poke
   |=  [=mark =vase]
