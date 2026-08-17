@@ -532,7 +532,20 @@
             %add-resource  'notifications/resources/list_changed'
             %add-template  'notifications/resources/list_changed'
           ==
-        :-  (broadcast-list-changed bowl sse-sessions notif)
+        ::  An add that leaves the feature set as it was (for instance
+        ::  the install-features thread re-importing an unchanged file
+        ::  on load) is not a list change; skip the broadcast for it.
+        ::
+        =/  changed=?
+          ?-  mark
+            %add-tool      !(~(has in tools) !<(tool:mcp vase))
+            %add-prompt    !(~(has in prompts) !<(prompt:mcp vase))
+            %add-resource  !(~(has in resources) !<(resource:mcp vase))
+            %add-template  !(~(has in templates) !<(template:resource:mcp vase))
+          ==
+        :-  ?.  changed
+              ~
+            (broadcast-list-changed bowl sse-sessions notif)
         ?-  mark
           %add-tool
             =/  new=tool:mcp  !<(tool:mcp vase)
