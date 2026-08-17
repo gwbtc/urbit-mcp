@@ -238,32 +238,91 @@
 ::
 +$  card  card:agent:gall
 ::
+::  +feature-files: every file under /fil/mcp at the current revision
+::
+++  feature-files
+  |=  =bowl:gall
+  ^-  (list path)
+  .^  (list path)
+      %ct
+      /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)/fil/mcp
+  ==
+::
 ::  +install-features-card: fire /ted/install-features over every file
 ::  under /fil/mcp, registering tools, prompts, resources, and templates.
 ::  Imports replace entries by name, so re-firing this card is idempotent;
 ::  entries added at runtime under other names are untouched.
 ::
 ++  install-features-card
-  |=  [our=ship =desk now=@da]
+  |=  =bowl:gall
   ^-  card
   :*  %pass  ~
       %arvo  %k
-      %fard  desk
+      %fard  q.byk.bowl
       %install-features
       :-  %noun
       !>  ^-  (list beam)
       %+  turn
-        .^  (list path)
-            %ct
-            /(scot %p our)/[desk]/(scot %da now)/fil/mcp
-        ==
+        (feature-files bowl)
       |=  pax=path
       ^-  beam
       %-  need
       %-  de-beam
       %+  welp
-        /(scot %p our)/[desk]/(scot %da now)
+        /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)
       pax
+  ==
+::
+::  +load-changed-cards: per-class list_changed notifications for the
+::  features a desk update will register.  A feature's name lives inside
+::  its file, not in the filename, and resolving it would mean building
+::  every file during +on-load, so this compares a coarse proxy: the
+::  number of files under /fil/mcp/<class> against the number of
+::  features the class held before the load.  A no-op reload leaves the
+::  counts equal (no notification); a new file makes them differ (one
+::  notification for its class).  Features added at runtime skew the
+::  count, at worst causing a spurious or missed notification here;
+::  clients treat list_changed as a hint to re-fetch, and the %add-*
+::  pokes the install-features thread sends still notify per change.
+::
+++  load-changed-cards
+  |=  [=bowl:gall old=state-0]
+  ^-  (list card)
+  =/  files  (feature-files bowl)
+  =/  count-under
+    |=  prefix=path
+    ^-  @ud
+    %-  lent
+    %+  skim  files
+    |=  pax=path
+    =(prefix (scag (lent prefix) pax))
+  %-  zing
+  ^-  (list (list card))
+  :~  ?:  =((count-under /fil/mcp/tools) ~(wyt in tools.old))
+        ~
+      %:  broadcast-list-changed
+          bowl
+          sse-sessions.old
+          'notifications/tools/list_changed'
+      ==
+    ::
+      ?:  =((count-under /fil/mcp/prompts) ~(wyt in prompts.old))
+        ~
+      %:  broadcast-list-changed
+          bowl
+          sse-sessions.old
+          'notifications/prompts/list_changed'
+      ==
+    ::
+      ?:  ?&  =((count-under /fil/mcp/resources) ~(wyt in resources.old))
+              =((count-under /fil/mcp/templates) ~(wyt in templates.old))
+          ==
+        ~
+      %:  broadcast-list-changed
+          bowl
+          sse-sessions.old
+          'notifications/resources/list_changed'
+      ==
   ==
 +$  versioned-state
   $%  state-0
@@ -308,16 +367,21 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
-  ::  Re-run install-features on every load so tool, prompt, resource,
-  ::  and template files brought in by a desk update register without a
-  ::  manual %fard. Re-firing is idempotent: imports replace by name.
-  ::
-  =/  reimport-card=card
-    (install-features-card our.bowl q.byk.bowl now.bowl)
   ?-    -.old
       %0
     :_  this(state [%0 +.old])
-    :~  well-known-card  oauth-card  reimport-card  ==
+    ::  Re-run install-features on every load so tool, prompt, resource,
+    ::  and template files brought in by a desk update register without a
+    ::  manual %fard (re-firing is idempotent: imports replace by name),
+    ::  and tell connected clients which feature lists will change.
+    ::
+    %+  weld
+      ^-  (list card)
+      :~  oauth-card
+          well-known-card
+          (install-features-card bowl)
+      ==
+    (load-changed-cards bowl old)
   ==
 ::
 ++  on-init
@@ -346,7 +410,7 @@
           %arvo  %e  %connect
           [[~ ~['oauth']] dap.bowl]
       ==
-      (install-features-card our.bowl q.byk.bowl now.bowl)
+      (install-features-card bowl)
   ==
 ::
 ++  on-poke
