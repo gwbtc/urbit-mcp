@@ -710,8 +710,14 @@
         ?~  get-session=(get-header:http 'mcp-session-id' header-list.request.req)
           eyre-id
         u.get-session
+      ::  ping the notification stream on a timer; without a keepalive
+      ::  an idle GET stream drops after ~45s and clients miss
+      ::  list_changed notifications sent between reconnects
+      ::
       :_  this(sse-sessions (~(put by sse-sessions) eyre-id session-id))
-      (send-sse-start eyre-id)
+      %+  weld
+        (send-sse-start eyre-id)
+      ~[(set-keepalive now.bowl eyre-id)]
     ::
         %'DELETE'
       [(simple-response eyre-id 405 ~[['allow' 'GET, POST']]) this]
