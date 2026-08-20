@@ -3,12 +3,33 @@
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
     scry-uri=uri-scry
 ::
+::  default features are imported with /~
+::  to force rebuilds when they're added or changed
+/~  fil-tools     tool:mcp               /fil/mcp/tools
+/~  fil-prompts   prompt:mcp             /fil/mcp/prompts
+/~  fil-res-beam  resource:mcp           /fil/mcp/resources/beam
+/~  fil-res-scry  resource:mcp           /fil/mcp/resources/scry
+/~  fil-res-docs  resource:mcp           /fil/mcp/resources/urbit-docs
+/~  fil-tpl-scry  template:resource:mcp  /fil/mcp/templates/scry
+/~  fil-tpl-fine  template:resource:mcp  /fil/mcp/templates/fine
+::
 /$  tools-to-json      %mcp-tools      %json
 /$  prompts-to-json    %mcp-prompts    %json
 /$  resources-to-json  %mcp-resources  %json
 /$  templates-to-json  %mcp-templates  %json
 ::
 |%
+::
+::  replace .old entries with .new entries that share .key
+++  merge-features
+  |*  [new=(list) old=(set) key=$-(* *)]
+  ^+  old
+  =/  keys  (silt (turn new key))
+  %-  silt
+  %+  weld  new
+  %+  skip  ~(tap in old)
+  |=(o=_(head ~(tap in old)) (~(has in keys) (key o)))
+::
 ++  mcp-protocol-version  %'2025-11-25'
 ::
 ++  print-tang-to-wain
@@ -238,67 +259,30 @@
 ::
 +$  card  card:agent:gall
 ::
-::  +feature-files: every file under /fil/mcp at the current revision
-::
-++  feature-files
-  |=  =bowl:gall
-  ^-  (list path)
-  .^  (list path)
-      %ct
-      /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)/fil/mcp
-  ==
-::
-::  +install-features-card: fire /ted/install-features over every file
-::  under /fil/mcp, registering tools, prompts, resources, and templates.
-::  Imports replace entries by name, so re-firing this card is idempotent;
-::  entries added at runtime under other names are untouched.
-::
-++  install-features-card
-  |=  =bowl:gall
-  ^-  card
-  :*  %pass  ~
-      %arvo  %k
-      %fard  q.byk.bowl
-      %install-features
-      :-  %noun
-      !>  ^-  (list beam)
-      %+  turn
-        (feature-files bowl)
-      |=  pax=path
-      ^-  beam
-      %-  need
-      %-  de-beam
-      %+  welp
-        /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)
-      pax
+++  install-defaults
+  |=  $:  old=state-0
+          tools=(list tool:mcp)
+          prompts=(list prompt:mcp)
+          resources=(list resource:mcp)
+          templates=(list template:resource:mcp)
+      ==
+  ^-  state-0
+  %=  old
+    tools      (merge-features tools tools.old |=(t=tool:mcp name.t))
+    prompts    (merge-features prompts prompts.old |=(p=prompt:mcp name.p))
+    resources  (merge-features resources resources.old |=(r=resource:mcp uri.r))
+    templates  (merge-features templates templates.old |=(t=template:resource:mcp name.t))
   ==
 ::
 ::  +load-changed-cards: per-class list_changed notifications for the
-::  features a desk update will register.  A feature's name lives inside
-::  its file, not in the filename, and resolving it would mean building
-::  every file during +on-load, so this compares a coarse proxy: the
-::  number of files under /fil/mcp/<class> against the number of
-::  features the class held before the load.  A no-op reload leaves the
-::  counts equal (no notification); a new file makes them differ (one
-::  notification for its class).  Features added at runtime skew the
-::  count, at worst causing a spurious or missed notification here;
-::  clients treat list_changed as a hint to re-fetch, and the %add-*
-::  pokes the install-features thread sends still notify per change.
+::  classes whose feature set differs between .old and .new
 ::
 ++  load-changed-cards
-  |=  [=bowl:gall old=state-0]
+  |=  [=bowl:gall old=state-0 new=state-0]
   ^-  (list card)
-  =/  files  (feature-files bowl)
-  =/  count-under
-    |=  prefix=path
-    ^-  @ud
-    %-  lent
-    %+  skim  files
-    |=  pax=path
-    =(prefix (scag (lent prefix) pax))
   %-  zing
   ^-  (list (list card))
-  :~  ?:  =((count-under /fil/mcp/tools) ~(wyt in tools.old))
+  :~  ?:  =(tools.old tools.new)
         ~
       %:  broadcast-list-changed
           bowl
@@ -306,7 +290,7 @@
           'notifications/tools/list_changed'
       ==
     ::
-      ?:  =((count-under /fil/mcp/prompts) ~(wyt in prompts.old))
+      ?:  =(prompts.old prompts.new)
         ~
       %:  broadcast-list-changed
           bowl
@@ -314,8 +298,8 @@
           'notifications/prompts/list_changed'
       ==
     ::
-      ?:  ?&  =((count-under /fil/mcp/resources) ~(wyt in resources.old))
-              =((count-under /fil/mcp/templates) ~(wyt in templates.old))
+      ?:  ?&  =(resources.old resources.new)
+              =(templates.old templates.new)
           ==
         ~
       %:  broadcast-list-changed
@@ -343,8 +327,12 @@
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
-+*  this   .
-    def    ~(. (default-agent this %|) bowl)
++*  this               .
+    def                ~(. (default-agent this %|) bowl)
+    default-tools      ~(val by fil-tools)
+    default-prompts    ~(val by fil-prompts)
+    default-templates  (weld ~(val by fil-tpl-scry) ~(val by fil-tpl-fine))
+    default-resources  :(weld ~(val by fil-res-beam) ~(val by fil-res-scry) ~(val by fil-res-docs))
 ::
 ++  on-agent  on-agent:def
 ++  on-leave  on-leave:def
@@ -369,24 +357,34 @@
     ==
   ?-    -.old
       %0
-    :_  this(state [%0 +.old])
-    ::  Re-run install-features on every load so tool, prompt, resource,
-    ::  and template files brought in by a desk update register without a
-    ::  manual %fard (re-firing is idempotent: imports replace by name),
-    ::  and tell connected clients which feature lists will change.
-    ::
+    =/  new=state-0
+      %:  install-defaults
+          old
+          default-tools
+          default-prompts
+          default-resources
+          default-templates
+      ==
+    :_  this(state new)
     %+  weld
       ^-  (list card)
       :~  oauth-card
           well-known-card
-          (install-features-card bowl)
       ==
-    (load-changed-cards bowl old)
+    (load-changed-cards bowl old new)
   ==
 ::
 ++  on-init
   ^-  (quip card _this)
-  :_  this
+  :_  %=  this
+        state  %-  install-defaults
+               :*  state
+                   default-tools
+                   default-prompts
+                   default-resources
+                   default-templates
+               ==
+      ==
   :~  :*  %pass  /eyre/connect
           %arvo  %e  %connect
           [`/mcp dap.bowl]
@@ -410,7 +408,6 @@
           %arvo  %e  %connect
           [[~ ~['oauth']] dap.bowl]
       ==
-      (install-features-card bowl)
   ==
 ::
 ++  on-poke
