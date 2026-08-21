@@ -44,6 +44,19 @@
   |=  =tape
   (crip tape)
 ::
+::  +as-object: coerce a tool's structured payload to a JSON object.
+::
+::  MCP requires `structuredContent` to be an object. A tool that returns an
+::  array or an atom there produces a response strict clients reject whole,
+::  discarding the sibling `content` field that says what went wrong. Wrap
+::  anything that is not already an object rather than dropping it.
+::
+++  as-object
+  |=  jon=json
+  ^-  json
+  ?:  ?=([%o *] jon)  jon
+  (frond:enjs:format 'data' jon)
+::
 ++  mark-mime
   |=  =mark
   ^-  @t
@@ -1464,7 +1477,7 @@
                   ==
                   ?~  data.response
                     ~
-                  :~  ['structuredContent' u.data.response]
+                  :~  ['structuredContent' (as-object u.data.response)]
                   ==
                   :~  ['isError' b+.y]
                   ==
@@ -1478,25 +1491,6 @@
               :-  'result'
               ?-    response
                   [%result %structured *]
-                ::  structuredContent must be a JSON object or
-                ::  some clients will fail silently
-                ?.  ?=(%o -.json.response)
-                  %-  pairs:enjs:format
-                  :~  ['isError' b+.y]
-                      :-  'content'
-                      :-  %a
-                      :~  %-  pairs:enjs:format
-                          :~  ['type' s+'text']
-                              :-  'text'
-                              :-  %s
-                              %-  en:json:html
-                              %-  frond:enjs:format
-                              :-  'error'
-                              :-  %s
-                              'structuredContent output is not a valid JSON object'
-                          ==
-                      ==
-                  ==
                 %-  pairs:enjs:format
                 :~  :-  'content'
                     :-  %a
@@ -1505,7 +1499,7 @@
                             ['text' s+(en:json:html json.response)]
                         ==
                     ==
-                    ['structuredContent' json.response]
+                    ['structuredContent' (as-object json.response)]
                     ['isError' b+.n]
                 ==
               ::
