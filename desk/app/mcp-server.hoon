@@ -24,6 +24,13 @@
 ++  merge-features
   |*  [new=(list) old=(set) key=$-(* *)]
   ^+  old
+  ::  Empty old must exit before the skip gate below is built: its
+  ::  sample type is _(head ~(tap in old)), and a $_ bunt EVALUATES
+  ::  the expression — head of an empty tap crashes. Every fresh
+  ::  install has empty sets, so on-init died in gall while upgrades
+  ::  (non-empty state via on-load) sailed through. That asymmetry is
+  ::  why this bug survived on long-lived ships.
+  ?:  =(~ old)  (silt new)
   =/  keys  (silt (turn new key))
   %-  silt
   %+  weld  new
@@ -345,6 +352,15 @@
   |=  =vase
   ^-  (quip card _this)
   =/  old  !<(versioned-state vase)
+  ::  Rebind /mcp on every load, not just on-init. An upgrade or a
+  ::  nuke+revive runs on-load only, and without this card the main
+  ::  endpoint 404s while /oauth and /.well-known keep working — the
+  ::  agent looks healthy in +vats and serves nothing.
+  =/  mcp-card=card
+    :*  %pass  /eyre/connect
+        %arvo  %e  %connect
+        [`/mcp dap.bowl]
+    ==
   =/  oauth-card=card
     :*  %pass  /eyre/connect/oauth
         %arvo  %e  %connect
@@ -368,7 +384,8 @@
     :_  this(state new)
     %+  weld
       ^-  (list card)
-      :~  oauth-card
+      :~  mcp-card
+          oauth-card
           well-known-card
       ==
     (load-changed-cards bowl old new)
