@@ -250,6 +250,13 @@
       Dojo output, not the total run time; collection ends when Dojo
       shows its next prompt. Defaults to 10.
       '''
+      :-  'sole-id'
+      :-  %string
+      '''
+      Optional %sole session name to use instead of a fresh random one,
+      e.g. the sole-id returned by an earlier call. Reusing a session
+      lets later commands see Dojo state set by earlier ones.
+      '''
   ==
   ~['command']
   ^-  thread-builder:tool:mcp
@@ -268,35 +275,39 @@
     ?>  ?=([%number @] u.arg)
     (mul ~s1 p.u.arg)
   ;<  bowl=bowl:rand  bind:m  get-bowl:io
-  =/  ses=@ta  (scot %ta (cat 3 'mcp-dojo-' (scot %uv (sham eny.bowl))))
-  =/  id=sole-id  [our.bowl ses]
+  =/  ses=@ta
+    =/  arg=(unit argument:tool:mcp)  (~(get by args) 'sole-id')
+    ?~  arg
+      (cat 3 'mcp-dojo-' (scot %uv (sham eny.bowl)))
+    ?>  ?=([%string @t] u.arg)
+    `@ta`p.u.arg
   =/  wire=wire   /dojo-command/[ses]
-  ;<  ~  bind:m  (watch-our:io wire %dojo /sole/(scot %p our.bowl)/[ses])
-  ;<  *  bind:m  (collect-until-pro wire ~s5)
+  ::  %mcp-server holds the %sole subscription so the session outlives
+  ::  this thread; a fresh session greets us with a prompt to drain
+  ;<  held=?  bind:m  (scry:io ? /gx/mcp-server/dojo/[ses]/noun)
+  ;<  ~  bind:m  (watch-our:io wire %mcp-server /dojo/[ses])
+  ;<  *  bind:m
+    ?:  held
+      (pure:(strand ,[(list cord) ?]) [~ &])
+    (collect-until-pro wire ~s5)
   ;<  ~  bind:m
     (send-raw-card:io [%pass /dill-logs %arvo %d %logs `~])
   ;<  ~  bind:m
-    %+  poke-our:io  %dojo
-    :-  %sole-action
-    !>  ^-  sole-action
-    [id %det [[0 0] 0v0 [%set (tuba (trip p.u.cmd))]]]
-  ;<  ~  bind:m
-    %+  poke-our:io  %dojo
-    :-  %sole-action
-    !>  ^-  sole-action
-    [id %ret ~]
+    (poke-our:io %mcp-server %noun !>([%dojo-input ses p.u.cmd]))
   ;<  [result=(list cord) saved=(list path)]  bind:m
     (collect-output-until-pro wire timeout)
   ;<  ~  bind:m
     (send-raw-card:io [%pass /dill-logs %arvo %d %logs ~])
-  ;<  ~  bind:m  (leave-our:io wire %dojo)
   %-  pure:m
   !>  ^-  response:tool:mcp
   :-  %result
   :-  %structured
   %-  pairs:enjs:format
   %+  weld
-    `(list [@t json])`['dojo-output' s+(of-wain:format result)]~
+    ^-  (list [@t json])
+    :~  ['dojo-output' s+(of-wain:format result)]
+        ['sole-id' s+ses]
+    ==
   ^-  (list [@t json])
   ?~  saved  ~
   ['saved-files' a+(turn saved |=(=path s+(unix-name path)))]~

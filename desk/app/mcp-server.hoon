@@ -1,7 +1,7 @@
-/-  mcp
+/-  mcp, sole
 /+  dbug, verb, server, default-agent, pf=pretty-file,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
-    scry-uri=uri-scry
+    scry-uri=uri-scry, sol=sole
 ::
 ::  default features are imported with /~
 ::  to force rebuilds when they're added or changed
@@ -267,13 +267,13 @@
 +$  card  card:agent:gall
 ::
 ++  install-defaults
-  |=  $:  old=state-0
+  |=  $:  old=state-1
           tools=(list tool:mcp)
           prompts=(list prompt:mcp)
           resources=(list resource:mcp)
           templates=(list template:resource:mcp)
       ==
-  ^-  state-0
+  ^-  state-1
   %=  old
     tools      (merge-features tools tools.old |=(t=tool:mcp name.t))
     prompts    (merge-features prompts prompts.old |=(p=prompt:mcp name.p))
@@ -285,7 +285,7 @@
 ::  classes whose feature set differs between .old and .new
 ::
 ++  load-changed-cards
-  |=  [=bowl:gall old=state-0 new=state-0]
+  |=  [=bowl:gall old=state-1 new=state-1]
   ^-  (list card)
   %-  zing
   ^-  (list (list card))
@@ -317,6 +317,7 @@
   ==
 +$  versioned-state
   $%  state-0
+      state-1
   ==
 +$  state-0
   $:  %0
@@ -327,10 +328,31 @@
       ::  map eyre-id to session:mcp
       sse-sessions=(map @ta session:mcp)
   ==
++$  state-1
+  $:  %1
+      tools=(set tool:mcp)
+      prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
+      templates=(set template:resource:mcp)
+      ::  map eyre-id to session:mcp
+      sse-sessions=(map @ta session:mcp)
+      ::  dojo %sole sessions we hold open, by name, with the
+      ::  shared-buffer clock we need to send edits dojo will accept
+      dojo=(map @ta sole-share:sole)
+  ==
+::
+::  +absorb: fold dojo's buffer edits into our side of the clock
+++  absorb
+  |=  [say=sole-share:sole fec=sole-effect:sole]
+  ^-  sole-share:sole
+  ?+  -.fec  say
+    %mor  (roll p.fec |=([f=sole-effect:sole s=_say] (absorb s f)))
+    %det  +:(~(transceive sol say) +.fec)
+  ==
 --
 %-  agent:dbug
 ^-  agent:gall
-=|  state-0
+=|  state-1
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
@@ -341,7 +363,45 @@
     default-templates  (weld ~(val by fil-tpl-scry) ~(val by fil-tpl-fine))
     default-resources  :(weld ~(val by fil-res-beam) ~(val by fil-res-scry) ~(val by fil-res-docs))
 ::
-++  on-agent  on-agent:def
+::
+::  dojo sessions: a tool thread cannot keep a %sole subscription
+::  alive past its own run (spider leaves it and dojo drops the
+::  session on leave), so the agent holds the subscription to dojo,
+::  tracks the %sole buffer clock, and relays effects to threads
+::  watching /dojo/[ses].
+::
+++  on-agent
+  |=  [=(pole knot) =sign:agent:gall]
+  ^-  (quip card _this)
+  ?+    pole  (on-agent:def `wire`pole sign)
+      [%dojo ses=@ta ~]
+    =/  =path  /dojo/[ses.pole]
+    ?-    -.sign
+        %poke-ack
+      ?~  p.sign
+        `this
+      %-  (slog leaf/"mcp: dojo rejected input for {(trip ses.pole)}" u.p.sign)
+      `this
+    ::
+        %fact
+      ?>  =(%sole-effect p.cage.sign)
+      =/  say  (~(got by dojo) ses.pole)
+      :-  [%give %fact ~[path] cage.sign]~
+      =-  this(dojo (~(put by dojo) ses.pole -))
+      (absorb say !<(sole-effect:sole q.cage.sign))
+    ::
+        %kick
+      :-  [%give %kick ~[path] ~]~
+      this(dojo (~(del by dojo) ses.pole))
+    ::
+        %watch-ack
+      ?~  p.sign
+        `this
+      %-  (slog leaf/"mcp: dojo refused session {(trip ses.pole)}" u.p.sign)
+      :-  [%give %kick ~[path] ~]~
+      this(dojo (~(del by dojo) ses.pole))
+    ==
+  ==
 ++  on-leave  on-leave:def
 ++  on-fail   on-fail:def
 ++  on-save
@@ -371,25 +431,27 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
-  ?-    -.old
-      %0
-    =/  new=state-0
-      %:  install-defaults
-          old
-          default-tools
-          default-prompts
-          default-resources
-          default-templates
-      ==
-    :_  this(state new)
-    %+  weld
-      ^-  (list card)
-      :~  mcp-card
-          oauth-card
-          well-known-card
-      ==
-    (load-changed-cards bowl old new)
-  ==
+  =/  old=state-1
+    ?-  -.old
+      %1  old
+      %0  [%1 tools.old prompts.old resources.old templates.old sse-sessions.old ~]
+    ==
+  =/  new=state-1
+    %:  install-defaults
+        old
+        default-tools
+        default-prompts
+        default-resources
+        default-templates
+    ==
+  :_  this(state new)
+  %+  weld
+    ^-  (list card)
+    :~  mcp-card
+        oauth-card
+        well-known-card
+    ==
+  (load-changed-cards bowl old new)
 ::
 ++  on-init
   ^-  (quip card _this)
@@ -432,6 +494,34 @@
   ^-  (quip card _this)
   |^  ?+  mark
         (on-poke:def mark vase)
+      ::
+      ::  :mcp-server [%dojo-input ses 'cmd']  run a line in a held session
+      ::  :mcp-server [%dojo-close ses]        drop a held session
+          %noun
+        ?>  =(src our):bowl
+        =/  act  !<($%([%dojo-input ses=@ta txt=@t] [%dojo-close ses=@ta]) vase)
+        ?-    -.act
+            %dojo-close
+          :_  this(dojo (~(del by dojo) ses.act))
+          :~  [%pass /dojo/[ses.act] %agent [our.bowl %dojo] %leave ~]
+              [%give %kick ~[/dojo/[ses.act]] ~]
+          ==
+        ::
+            %dojo-input
+          =/  id=sole-id:sole  [our.bowl ses.act]
+          =^  cal=sole-change:sole  dojo
+            =/  say  (~(got by dojo) ses.act)
+            =^  cal  say  (~(transmit sol say) [%set (tuba (trip txt.act))])
+            [cal (~(put by dojo) ses.act say)]
+          :_  this
+          :~  :*  %pass  /dojo/[ses.act]  %agent  [our.bowl %dojo]
+                  %poke  %sole-action  !>(`sole-action:sole`[id %det cal])
+              ==
+              :*  %pass  /dojo/[ses.act]  %agent  [our.bowl %dojo]
+                  %poke  %sole-action  !>(`sole-action:sole`[id %ret ~])
+              ==
+          ==
+        ==
       ::
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
@@ -1391,6 +1481,11 @@
       [%x %mcp %templates ~]
     ``mcp-templates+!>(~(tap in templates))
     ::
+    ::  .^(? %gx /=mcp-server=/dojo/[ses]/noun)
+    ::  is a dojo session held for this name?
+      [%x %dojo ses=@ta ~]
+    ``noun+!>((~(has by dojo) ses.pole))
+    ::
     ::  search for tools under a path (e.g. /urbit, /urbit/mcp)
     ::  .^(json %gx /=mcp-server=/mcp/tools/urbit/mcp/json)
     ::  .^((list tool:mcp) %gx /=mcp-server=/mcp/tools/urbit/mcp/noun)
@@ -1789,5 +1884,16 @@
   ?+    pole  (on-watch:def `path`pole)
       [%http-response eyre-id=@ta ~]
     `this
+  ::
+  ::  open the dojo session on first watch; later watchers join it
+      [%dojo ses=@ta ~]
+    ?>  =(src our):bowl
+    ?:  (~(has by dojo) ses.pole)
+      `this
+    :_  this(dojo (~(put by dojo) ses.pole *sole-share:sole))
+    :~  :*  %pass  /dojo/[ses.pole]  %agent  [our.bowl %dojo]
+            %watch  /sole/(scot %p our.bowl)/[ses.pole]
+        ==
+    ==
   ==
 --
