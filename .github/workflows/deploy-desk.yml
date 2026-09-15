@@ -8,7 +8,8 @@ env:
   DESK:      mcp
   SCREEN:    sponsor
   SHIP_HOST: root@${{ vars.SPONSOR_IP }}
-  PIER_PATH: \~
+  PIER_PATH: /root
+  PIER:      sponsor
   DIST_PIER: ${{ vars.SPONSOR_URBIT_ID_NO_TILDE }}
 
 jobs:
@@ -39,12 +40,12 @@ jobs:
           ssh-keyscan -H ${{ vars.SPONSOR_IP }} >> ~/.ssh/known_hosts
 
       - name: Clear deployed desk
-        run: ssh ${SHIP_HOST} "find ${PIER_PATH}/${DIST_PIER}/${DESK} -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
+        run: ssh ${SHIP_HOST} "find ${PIER_PATH}/${PIER}/${DESK} -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
 
       - name: Deploy desk
         run: |
           rsync -az --delete --exclude='.git*' \
-            zig-out/ ${SHIP_HOST}:${PIER_PATH}/${DIST_PIER}/${DESK}/
+            zig-out/ ${SHIP_HOST}:${PIER_PATH}/${PIER}/${DESK}/
 
       - name: Commit desk on ship
         run: |
