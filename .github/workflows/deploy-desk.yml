@@ -8,7 +8,7 @@ env:
   DESK:      mcp
   SCREEN:    sponsor
   SHIP_HOST: root@${{ vars.SPONSOR_IP }}
-  PIER_PATH: ~
+  PIER_PATH: \~
   DIST_PIER: ${{ vars.SPONSOR_URBIT_ID_NO_TILDE }}
 
 jobs:
