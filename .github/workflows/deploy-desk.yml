@@ -36,7 +36,7 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.SPONSOR_VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H {{ vars.SPONSOR_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.SPONSOR_IP }} >> ~/.ssh/known_hosts
 
       - name: Clear deployed desk
         run: ssh ${SHIP_HOST} "find ${PIER_PATH}/${DIST_PIER}/${DESK} -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
