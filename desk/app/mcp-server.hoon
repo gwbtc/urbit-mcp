@@ -1,7 +1,7 @@
-/-  mcp
+/-  mcp, aquarium
 /+  dbug, verb, server, default-agent, pf=pretty-file,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
-    scry-uri=uri-scry
+    scry-uri=uri-scry, aq=mcp-aqua, ma=mcp-arguments
 ::
 ::  default features are imported with /~
 ::  to force rebuilds when they're added or changed
@@ -267,13 +267,13 @@
 +$  card  card:agent:gall
 ::
 ++  install-defaults
-  |=  $:  old=state-0
+  |=  $:  old=state-2
           tools=(list tool:mcp)
           prompts=(list prompt:mcp)
           resources=(list resource:mcp)
           templates=(list template:resource:mcp)
       ==
-  ^-  state-0
+  ^-  state-2
   %=  old
     tools      (merge-features tools tools.old |=(t=tool:mcp name.t))
     prompts    (merge-features prompts prompts.old |=(p=prompt:mcp name.p))
@@ -285,7 +285,7 @@
 ::  classes whose feature set differs between .old and .new
 ::
 ++  load-changed-cards
-  |=  [=bowl:gall old=state-0 new=state-0]
+  |=  [=bowl:gall old=state-2 new=state-2]
   ^-  (list card)
   %-  zing
   ^-  (list (list card))
@@ -317,6 +317,8 @@
   ==
 +$  versioned-state
   $%  state-0
+      state-1
+      state-2
   ==
 +$  state-0
   $:  %0
@@ -327,10 +329,47 @@
       ::  map eyre-id to session:mcp
       sse-sessions=(map @ta session:mcp)
   ==
+::  Accept the superseded experiment's state on existing development ships.
+::  Its unbounded jobs are deliberately not migrated.
++$  state-1
+  $:  %1
+      tools=(set tool:mcp)
+      prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
+      templates=(set template:resource:mcp)
+      sse-sessions=(map @ta session:mcp)
+      legacy-jobs=*
+      legacy-active=*
+  ==
+::
++$  state-2
+  $:  %2
+      tools=(set tool:mcp)
+      prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
+      templates=(set template:resource:mcp)
+      sse-sessions=(map @ta session:mcp)
+      aqua=state:aq
+  ==
+::  Cleanup is local to the managed run, never kills the shared Aqua agent.
+::
+++  aqua-cleanup
+  |=  [our=@p id=@ta tid=@ta stop=?]
+  ^-  (list card)
+  %+  weld
+    ^-  (list card)
+    ?:  stop
+      ~[[%pass /aqua/[id]/stop %agent [our %spider] %poke %spider-stop !>([tid |])]]
+    ~
+  ^-  (list card)
+  :~  [%pass /aqua/[id]/result %agent [our %spider] %leave ~]
+      [%pass /aqua/[id]/effects %agent [our %aqua] %leave ~]
+  ==
 --
+::
 %-  agent:dbug
 ^-  agent:gall
-=|  state-0
+=|  state-2
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
@@ -341,7 +380,75 @@
     default-templates  (weld ~(val by fil-tpl-scry) ~(val by fil-tpl-fine))
     default-resources  :(weld ~(val by fil-res-beam) ~(val by fil-res-scry) ~(val by fil-res-docs))
 ::
-++  on-agent  on-agent:def
+++  on-agent
+  |=  [=wire =sign:agent:gall]
+  ^-  (quip card _this)
+  |^
+  ?.  ?=([%aqua @ @ ~] wire)
+    (on-agent:def wire sign)
+  =/  id=@ta  i.t.wire
+  =/  branch=@tas  i.t.t.wire
+  =/  got=(unit run:aq)  (~(get by runs.aqua) id)
+  ?~  got  `this
+  =/  r=run:aq  u.got
+  ?:  (terminal:aq status.r)  `this
+  ?-    -.sign
+      %watch-ack
+    ?^  p.sign  (finish id %failed `'subscription rejected' &)
+    ?.  =(%result branch)  `this
+    ?:  ?=(?(%cancelling %finishing) status.r)  `this
+    =.  r  r(status %running, updated now.bowl)
+    `this(aqua aqua(runs (~(put by runs.aqua) id r)))
+  ::
+      %poke-ack
+    ?~  p.sign  `this
+    (finish id %failed `'Spider rejected operation' &)
+  ::
+      %kick
+    ?:  &(=(%result branch) =(%finishing status.r))  `this
+    ?:  =(%cancelling status.r)  (finish id %cancelled ~ |)
+    (finish id %failed `'subscription closed unexpectedly' &)
+  ::
+      %fact
+    ?:  =(%effects branch)
+      ?.  =(%aqua-effect p.cage.sign)  `this
+      ::  Decode the envelope first; runtime-specific tags are opaque.
+      =.  r  (observe:aq r now.bowl +.q.cage.sign)
+      `this(aqua aqua(runs (~(put by runs.aqua) id r)))
+    ?.  =(%result branch)  `this
+    ?:  =(%finishing status.r)  `this
+    ?+    p.cage.sign  `this
+        %thread-done
+      (drain id ?:(=(%cancelling status.r) %cancelled %completed) ~)
+    ::
+        %thread-fail
+      =+  !<([term=@tas =tang] q.cage.sign)
+      ::  Never render a potentially enormous error tang here.
+      ?:  =(%cancelling status.r)  (drain id %cancelled ~)
+      (drain id %failed `(crip "Spider failure: %{(trip (end [3 128] term))}; tang omitted"))
+    ==
+  ==
+  ::
+  ++  drain
+    |=  [id=@ta result=status:aq error=(unit @t)]
+    ^-  (quip card _this)
+    =/  r=run:aq  (~(got by runs.aqua) id)
+    =.  r  (begin-finish:aq r now.bowl error)
+    =/  branch=@tas  (drain-branch:aq result)
+    :_  this(aqua aqua(runs (~(put by runs.aqua) id r)))
+    ::  One logical tick in the future forces a new host kernel event.
+    ::  Poke acks can overtake pending facts in the current event's worklist;
+    ::  an external Behn wake cannot. No guest events or quiet-period timer.
+    ~[[%pass /aqua-drain/[id]/[branch] %arvo %b %wait +(now.bowl)]]
+  ::
+  ++  finish
+    |=  [id=@ta result=status:aq error=(unit @t) stop=?]
+    ^-  (quip card _this)
+    =/  r=run:aq  (~(got by runs.aqua) id)
+    :_  this(aqua (complete:aq aqua id now.bowl result error))
+    (aqua-cleanup our.bowl id tid.r stop)
+  --
+::
 ++  on-leave  on-leave:def
 ++  on-fail   on-fail:def
 ++  on-save
@@ -371,25 +478,36 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
-  ?-    -.old
-      %0
-    =/  new=state-0
-      %:  install-defaults
-          old
-          default-tools
-          default-prompts
-          default-resources
-          default-templates
-      ==
-    :_  this(state new)
-    %+  weld
-      ^-  (list card)
-      :~  mcp-card
-          oauth-card
-          well-known-card
-      ==
-    (load-changed-cards bowl old new)
-  ==
+  =/  migrated=state-2
+    ?-  -.old
+      %0  [%2 tools.old prompts.old resources.old templates.old sse-sessions.old *state:aq]
+      %1  [%2 tools.old prompts.old resources.old templates.old sse-sessions.old *state:aq]
+      %2  old
+    ==
+  =/  cleanup=(list card)
+    ?~  active.aqua.migrated  ~
+    =/  id=@ta  u.active.aqua.migrated
+    =/  r=run:aq  (~(got by runs.aqua.migrated) id)
+    (aqua-cleanup our.bowl id tid.r &)
+  =?  migrated  ?=(^ active.aqua.migrated)
+    =/  id=@ta  u.active.aqua.migrated
+    migrated(aqua (complete:aq aqua.migrated id now.bowl %interrupted `'agent reloaded; managed thread stopped'))
+  =/  new=state-2
+    %:  install-defaults
+        migrated
+        default-tools
+        default-prompts
+        default-resources
+        default-templates
+    ==
+  :_  this(state new)
+  %+  weld
+    ^-  (list card)
+    :~  mcp-card
+        oauth-card
+        well-known-card
+    ==
+  (weld cleanup (load-changed-cards bowl migrated new))
 ::
 ++  on-init
   ^-  (quip card _this)
@@ -432,6 +550,42 @@
   ^-  (quip card _this)
   |^  ?+  mark
         (on-poke:def mark vase)
+          ::  Ordinary MCP tool threads delegate durable capture to this agent.
+          %mcp-aqua
+        ?>  =(src our):bowl
+        =/  act=action:aq  !<(action:aq vase)
+        ?-    -.act
+            %start
+          ?>  ?=(~ active.aqua)
+          ?>  !(~(has by runs.aqua) id.act)
+          ?>  &((lte (met 3 id.act) 128) (lte (met 3 desk.act) 128) (lte (met 3 term.act) 128))
+          ?>  (lte (lent effects.act) 16)
+          ?>  (levy effects.act |=(e=@tas (matches-effect:aq supported-effects:aq e)))
+          =/  kept=state:aq  (retain:aq aqua)
+          =/  tid=@ta  (cat 3 'mcp-aqua-' id.act)
+          =/  r=run:aq
+            [id.act tid desk.act term.act %starting now.bowl now.bowl 0 0 0 ~ ~ effects.act 0 ~]
+          :_  this(aqua kept(runs (~(put by runs.kept) id.act r), active `id.act))
+          :~  [%pass /aqua/[id.act]/effects %agent [our.bowl %aqua] %watch /effect]
+              [%pass /aqua/[id.act]/result %agent [our.bowl %spider] %watch /thread-result/[tid]]
+              :*  %pass  /aqua/[id.act]/start  %agent  [our.bowl %spider]  %poke
+                  %spider-start  !>([~ `tid [our.bowl desk.act da+now.bowl] term.act arg.act])
+              ==
+          ==
+        ::
+            %cancel
+          =/  r=run:aq  (~(got by runs.aqua) id.act)
+          ?:  |((terminal:aq status.r) ?=(?(%cancelling %finishing) status.r))  `this
+          =/  pending=run:aq  r
+          =.  pending  pending(status %cancelling, updated now.bowl)
+          :_  this(aqua aqua(runs (~(put by runs.aqua) id.act pending)))
+          ~[[%pass /aqua/[id.act]/stop %agent [our.bowl %spider] %poke %spider-stop !>([tid.r |])]]
+        ::
+            %release
+          =/  r=run:aq  (~(got by runs.aqua) id.act)
+          ?>  (terminal:aq status.r)
+          `this(aqua aqua(runs (~(del by runs.aqua) id.act)))
+        ==
       ::
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
@@ -1315,29 +1469,10 @@
             ~
           ?~  args-map
             (send-event eyre-id (params:error:rpc p.u.id 'Invalid arguments' ~))
-          =>  |%
-              ++  parse-arg
-                |=  jon=json
-                ^-  argument:tool:mcp
-                ?+  jon
-                  ~
-                ::
-                    [%a *]
-                  [%array (turn p.jon parse-arg)]
-                ::
-                    [%b ?]
-                  [%boolean p.jon]
-                ::
-                    [%o *]
-                  [%object (~(run by p.jon) parse-arg)]
-                ::
-                    [%n @ta]
-                  [%number (slav %ud p.jon)]
-                ::
-                    [%s @t]
-                  [%string p.jon]
-                ==
-              --
+          =/  parsed=(unit (map @t argument:tool:mcp))
+            (parse-args:ma u.args-map)
+          ?~  parsed
+            (send-event eyre-id (params:error:rpc p.u.id 'Invalid tool arguments: numbers must be unsigned decimal integers' ~))
           ^-  (list card)
           ::  When the client accepts SSE (the MCP streamable-HTTP spec
           ::  says it must for POST), answer with an SSE stream and ping
@@ -1351,7 +1486,7 @@
                 %arvo  %k
                 %lard  q.byk.bowl
                 %-  thread-builder.i.tool-results
-                (~(run by u.args-map) parse-arg)
+                u.parsed
             ==
           ?.  sse
             ~[run-tool]
@@ -1366,6 +1501,12 @@
   |=  =(pole knot)
   ^-  (unit (unit cage))
   ?+  pole  (on-peek:def `path`pole)
+      [%x %aqua %read encoded=@ta ~]
+    ::  Tool encodes a small query in the scry path; no query state needed.
+    ?>  (lte (met 3 encoded.pole) 4.096)
+    =/  q=query:aq  ;;(query:aq (cue (slav %uv encoded.pole)))
+    ?>  &((lte (lent ships.q) 32) (lte (lent effects.q) 16) (lte (met 3 id.q) 128))
+    ``json+!>((read-json:aq aqua q))
     ::
     ::  .^(json %gx /=mcp-server=/mcp/tools/json)
     ::  .^((list tool:mcp) %gx /=mcp-server=/mcp/tools/noun)
@@ -1413,6 +1554,20 @@
   ^-  (quip card _this)
   ?+  pole
     `this
+  ::
+      [%aqua-drain id=@ta branch=@tas ~]
+    ?>  ?=([%behn %wake *] sign-arvo)
+    =/  wake-error=(unit tang)  +>.sign-arvo
+    =/  got=(unit run:aq)  (~(get by runs.aqua) id.pole)
+    ?~  got  `this
+    =/  r=run:aq  u.got
+    ?.  =(%finishing status.r)  `this
+    =/  result=(unit status:aq)  (drain-result:aq branch.pole)
+    ?~  result  `this
+    =/  final=status:aq  ?:(?=(^ wake-error) %failed u.result)
+    =/  error=(unit @t)  ?:(?=(^ wake-error) `'completion wake failed' error.r)
+    :_  this(aqua (complete:aq aqua id.pole now.bowl final error))
+    (aqua-cleanup our.bowl id.pole tid.r ?=(^ wake-error))
   ::
       [%keepalive eyre-id=@ta ~]
     ?>  ?=([%behn %wake *] sign-arvo)

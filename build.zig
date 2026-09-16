@@ -58,6 +58,7 @@ const dependencies = [_]RepoImport{
             "mar/sole/effect.hoon",
             "mar/txt.hoon",
             "sur/sole.hoon",
+            "sur/aquarium.hoon",
             "sur/spider.hoon",
             "sur/verb.hoon",
         },

@@ -93,6 +93,57 @@ Just ask! You can see the default tools [here](./desk/fil/default/mcp/tools).
 
 You can ask your LLM to add new Tools. Give it a description (and ideally, examples) and it will do its best, or provide a Hoon thread for it to adapt to run in `%mcp-server`. Threads in `%mcp-server` must be of signature `$-((map @t argument:tool:mcp) shed:khan)`.
 
+### Managed Aqua runs
+
+`aqua/start` starts a Spider thread without waiting for it to finish. Pass
+`desk`, `path` (for example `/ted/ph/add`), and optionally `arg` as raw Hoon.
+The ship must already have `%aqua` running with an appropriate pill loaded.
+
+Use the returned `runId` with `aqua/read`. Each page contains JSON records with
+`cursor`, `ship`, `effect`, `type`, `text`, `observedAt`, `elapsedMs`, and
+`truncated`, plus run status and `nextCursor`. Pass that cursor on subsequent
+reads. Optional `ships` and `effects` arrays filter records; `includePrompts`
+includes Dojo prompts. Filters advance the cursor over nonmatching records.
+Timestamps measure when the host observed an effect, not virtual-ship time.
+
+Default capture tags are `blit`, `init`, `sleep`, `restore`, and `kill`.
+`blit` output is rendered as plain text, including nested and colored frames.
+Other supported tags are opt-in metadata summaries; raw nouns, network packets,
+HTTP bodies, filesystem exports, returned vases, and error tangs are not retained.
+Effects are decoded envelope-first: unknown tags (including Groundwire's
+`fief` and `avow`) and filtered tags are skipped without inspecting their
+payloads. Selected effects decode only fields needed for rendering; malformed
+records increment the run's omitted counter instead of failing the subscription.
+Network summaries show the immediate lane target and `decodedBy` method. One
+decoder handles upstream's special comet and Groundwire's 12 synthetic comet
+addresses, without build options or a fief cache. Push summaries inspect at
+most four lanes and mark additional lanes as truncated. These are Aqua lane
+conventions, not general IP resolution or sender-specific fief remapping;
+unrecognized lanes are shown as unresolved. Packet recipients are not decoded.
+Runtime slog hints (`~&` and `~?`) are not part of `/effect` and are not captured.
+
+Storage is bounded to four runs, 2,048 records and 1 MiB of encoded record data
+per run, with bounded per-ship partial lines. Records are capped at 4 KiB and
+512 Unicode characters. Old records are evicted; a `gap` reports skipped
+cursor ranges. Starting a fifth run evicts the oldest retained run. One managed
+run can be active at a time because Aqua is a shared simulation instance;
+unrelated Aqua activity is not isolated from the captured stream.
+
+`maxBytes` controls the serialized JSON page budget (8–32 KiB). The existing
+server also duplicates structured data into MCP's text content, so the full
+response is larger (including JSON escaping). Clients can save JSON pages for
+programmatic analysis instead of displaying every record to a model.
+
+`aqua/cancel` stops the managed Spider thread and its children, not `%aqua`
+or its virtual ships. `aqua/release` deletes a finished run's retained data.
+An agent reload interrupts and stops an active managed thread.
+
+After Spider reports completion, a run briefly remains `finishing` until
+the next host kernel turn. A Behn wake scheduled one logical tick ahead
+provides this event boundary: the current event's pending effects drain
+before finalization flushes partial lines and unsubscribes. This is not a
+wall-clock grace period and does not inject virtual-ship events.
+
 ### Prompts (slash commands)
 
 Depending on your agent harness, MCP prompts for most default tools may be available as slash commands, e.g. `/mcp__zod__<tool name>`.
