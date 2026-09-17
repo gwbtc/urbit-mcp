@@ -3,13 +3,12 @@
 ^-  tool:mcp
 :*  'aqua/read'
     '''
-    Read a bounded JSON page from a managed Aqua run. nextCursor is exclusive;
-    filtered-out records advance it too. Reuse a prior cursor to re-filter.
-    gap reports evicted records. Only captured effect tags are available.
-    observedAt/elapsedMs describe host receipt time, not guest virtual time.
-    starting/running/cancelling/finishing are nonterminal. finishing drains
-    pending effects before completed/failed/cancelled/interrupted is reported.
-    hasMore refers to buffered pages, not whether the thread is finished.
+    Read one page of output captured from a managed Aqua run. The result
+    holds the run's status, a list of records (cursor, ship, effect, type,
+    text, observedAt, elapsedMs, truncated), and nextCursor. Pass nextCursor
+    as cursor on the next read. hasMore counts buffered records only; the
+    thread is done when status is completed, failed, cancelled, or
+    interrupted.
     '''
     %-  my
     :~  ['runId' [%string 'Run ID returned by aqua/start.']]

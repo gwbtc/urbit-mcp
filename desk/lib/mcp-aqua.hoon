@@ -131,7 +131,8 @@
   =|  out=(list @c)
   =/  budget=@ud  128
   |-
-  ?~  chunks  [(tufa out) |]
+  ?~  chunks
+    [(tufa out) |]
   ?:  |(=(0 budget) (gte (lent out) 512))  [(tufa out) &]
   =/  txt=(list @c)  (scag (sub 512 (lent out)) q.i.chunks)
   ?:  ?=(^ (slag (sub 512 (lent out)) q.i.chunks))
@@ -150,7 +151,8 @@
   =/  limited=?  ?=(^ (slag 512 bs))
   |^
   |-
-  ?~  work  (finish r cur limited)
+  ?~  work
+    (finish r cur limited)
   ?:  =(0 budget)  (finish r cur &)
   =/  b=blit:dill  i.work
   =/  rest=(list blit:dill)  t.work
@@ -288,7 +290,8 @@
 ++  target-text
   |=  decoded=(unit target)
   ^-  tape
-  ?~  decoded  "unresolved"
+  ?~  decoded
+    "unresolved"
   "{(scow %p ship.u.decoded)} decodedBy=%{(trip decoded-by.u.decoded)}"
 ::
 ++  network-text
@@ -315,7 +318,8 @@
   ^-  run
   =/  ps=(list (pair @p line))  ~(tap by partials.r)
   |-
-  ?~  ps  r(partials ~)
+  ?~  ps
+    r(partials ~)
   =/  who=@p  p.i.ps
   =/  cur=line  q.i.ps
   =?  r
@@ -330,7 +334,8 @@
   =/  candidates=(list (pair @ta run))  ~(tap by runs.s)
   =/  victim=(pair @ta run)  (head candidates)
   |-  ^-  state
-  ?~  candidates  s(runs (~(del by runs.s) p.victim))
+  ?~  candidates
+    s(runs (~(del by runs.s) p.victim))
   =?  victim  (lth started.q.i.candidates started.q.victim)  i.candidates
   $(candidates t.candidates)
 ::  Discard partial terminal buffers at termination; do not retain result vases.
@@ -339,7 +344,8 @@
   |=  [s=state id=@ta now=@da result=status error=(unit @t)]
   ^-  state
   =/  got=(unit run)  (~(get by runs.s) id)
-  ?~  got  s
+  ?~  got
+    s
   =/  r=run  (flush u.got now)
   =.  r  r(status result, updated now, error error)
   s(runs (~(put by runs.s) id r), active ?:(=(active.s `id) ~ active.s))
@@ -348,7 +354,8 @@
   |=  [ships=(list @p) who=@p]
   ^-  ?
   |-
-  ?~  ships  |
+  ?~  ships
+    |
   ?:  =(who i.ships)  &
   $(ships t.ships)
 ::
@@ -356,7 +363,8 @@
   |=  [effects=(list @tas) effect=@tas]
   ^-  ?
   |-
-  ?~  effects  |
+  ?~  effects
+    |
   ?:  =(effect i.effects)  &
   $(effects t.effects)
 ::  One bounded page. Cursor advances over filtered records, never past an
@@ -366,7 +374,8 @@
   |=  [s=state q=query]
   ^-  json
   =/  got=(unit run)  (~(get by runs.s) id.q)
-  ?~  got  (pairs:enjs:format ~[['error' s+'unknown run ID']])
+  ?~  got
+    (pairs:enjs:format ~[['error' s+'unknown run ID']])
   =/  r=run  u.got
   =/  pos=@ud  (min next.r (max oldest.r cursor.q))
   =/  effective=@ud  (min max-response-bytes (max 8.192 max-bytes.q))
@@ -409,7 +418,8 @@
         ~[['gap' (pairs:enjs:format ~[['from' (numb:enjs:format cursor.q)] ['to' (numb:enjs:format oldest.r)]])]]
       ~
     =/  err=(list [@t json])
-      ?~  error.r  ~
+      ?~  error.r
+        ~
       ~[['error' s+u.error.r]]
     (pairs:enjs:format (weld fields (weld extra err)))
   --

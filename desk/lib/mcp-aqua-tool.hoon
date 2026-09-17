@@ -8,21 +8,25 @@
   ^-  @tas
   =|  out=tape
   |-
-  ?~  pax  (@tas (crip out))
+  ?~  pax
+    (@tas (crip out))
   $(pax t.pax, out ?:(=(~ out) (trip i.pax) :(weld out "-" (trip i.pax))))
 ::
 ++  source-path
   |=  pax=path
   ^-  path
-  ?~  pax  ~
-  ?~  t.pax  ?:(=(%hoon i.pax) ~ pax)
+  ?~  pax
+    ~
+  ?~  t.pax
+    ?:(=(%hoon i.pax) ~ pax)
   [i.pax $(pax t.pax)]
 ::
 ++  string
   |=  [args=args key=@t default=@t]
   ^-  @t
   =/  got=(unit argument:tool:mcp)  (~(get by args) key)
-  ?~  got  default
+  ?~  got
+    default
   ?>  ?=(%string -.u.got)
   ?>  (lte (met 3 p.u.got) 4.096)
   p.u.got
@@ -31,7 +35,8 @@
   |=  [args=args key=@t default=@ud]
   ^-  @ud
   =/  got=(unit argument:tool:mcp)  (~(get by args) key)
-  ?~  got  default
+  ?~  got
+    default
   ?>  ?=(%number -.u.got)
   p.u.got
 ::
@@ -39,7 +44,8 @@
   |=  [args=args key=@t default=?]
   ^-  ?
   =/  got=(unit argument:tool:mcp)  (~(get by args) key)
-  ?~  got  default
+  ?~  got
+    default
   ?>  ?=(%boolean -.u.got)
   p.u.got
 ::
@@ -47,7 +53,8 @@
   |=  [args=args key=@t]
   ^-  (list @t)
   =/  got=(unit argument:tool:mcp)  (~(get by args) key)
-  ?~  got  ~
+  ?~  got
+    ~
   ?>  ?=(%array -.u.got)
   ?>  ?=(~ (slag 32 p.u.got))
   %+  turn  p.u.got

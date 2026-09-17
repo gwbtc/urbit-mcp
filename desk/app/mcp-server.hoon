@@ -1,4 +1,4 @@
-/-  mcp, aquarium
+/-  mcp
 /+  dbug, verb, server, default-agent, pf=pretty-file,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
     scry-uri=uri-scry, aq=mcp-aqua, ma=mcp-arguments
@@ -267,13 +267,13 @@
 +$  card  card:agent:gall
 ::
 ++  install-defaults
-  |=  $:  old=state-2
+  |=  $:  old=state-1
           tools=(list tool:mcp)
           prompts=(list prompt:mcp)
           resources=(list resource:mcp)
           templates=(list template:resource:mcp)
       ==
-  ^-  state-2
+  ^-  state-1
   %=  old
     tools      (merge-features tools tools.old |=(t=tool:mcp name.t))
     prompts    (merge-features prompts prompts.old |=(p=prompt:mcp name.p))
@@ -285,7 +285,7 @@
 ::  classes whose feature set differs between .old and .new
 ::
 ++  load-changed-cards
-  |=  [=bowl:gall old=state-2 new=state-2]
+  |=  [=bowl:gall old=state-1 new=state-1]
   ^-  (list card)
   %-  zing
   ^-  (list (list card))
@@ -318,7 +318,6 @@
 +$  versioned-state
   $%  state-0
       state-1
-      state-2
   ==
 +$  state-0
   $:  %0
@@ -329,8 +328,6 @@
       ::  map eyre-id to session:mcp
       sse-sessions=(map @ta session:mcp)
   ==
-::  Accept the superseded experiment's state on existing development ships.
-::  Its unbounded jobs are deliberately not migrated.
 +$  state-1
   $:  %1
       tools=(set tool:mcp)
@@ -338,21 +335,11 @@
       resources=(set resource:mcp)
       templates=(set template:resource:mcp)
       sse-sessions=(map @ta session:mcp)
-      legacy-jobs=*
-      legacy-active=*
-  ==
-::
-+$  state-2
-  $:  %2
-      tools=(set tool:mcp)
-      prompts=(set prompt:mcp)
-      resources=(set resource:mcp)
-      templates=(set template:resource:mcp)
-      sse-sessions=(map @ta session:mcp)
       aqua=state:aq
   ==
-::  Cleanup is local to the managed run, never kills the shared Aqua agent.
 ::
+::  +aqua-cleanup: stop and unsubscribe from one managed run;
+::  the shared %aqua agent and its virtual ships stay up
 ++  aqua-cleanup
   |=  [our=@p id=@ta tid=@ta stop=?]
   ^-  (list card)
@@ -365,11 +352,40 @@
   :~  [%pass /aqua/[id]/result %agent [our %spider] %leave ~]
       [%pass /aqua/[id]/effects %agent [our %aqua] %leave ~]
   ==
+::
+::  +aqua-drain: mark a run %finishing and wake one tick from now
+++  aqua-drain
+  |=  [=bowl:gall aqua=state:aq id=@ta result=status:aq error=(unit @t)]
+  ^-  (quip card state:aq)
+  =/  r=run:aq
+    (begin-finish:aq (~(got by runs.aqua) id) now.bowl error)
+  :_  aqua(runs (~(put by runs.aqua) id r))
+  ::  one logical tick in the future forces a new host kernel event.
+  ::  poke acks can overtake pending facts in the current event's
+  ::  worklist; an external behn wake cannot. no guest events or
+  ::  quiet-period timer.
+  :~  :*  %pass  /aqua-drain/[id]/(drain-branch:aq result)
+          %arvo  %b  %wait  +(now.bowl)
+      ==
+  ==
+::
+::  +aqua-finish: record a run's final status and clean up after it
+++  aqua-finish
+  |=  $:  =bowl:gall
+          aqua=state:aq
+          id=@ta
+          result=status:aq
+          error=(unit @t)
+          stop=?
+      ==
+  ^-  (quip card state:aq)
+  :-  (aqua-cleanup our.bowl id tid:(~(got by runs.aqua) id) stop)
+  (complete:aq aqua id now.bowl result error)
 --
 ::
 %-  agent:dbug
 ^-  agent:gall
-=|  state-2
+=|  state-1
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
@@ -381,73 +397,85 @@
     default-resources  :(weld ~(val by fil-res-beam) ~(val by fil-res-scry) ~(val by fil-res-docs))
 ::
 ++  on-agent
-  |=  [=wire =sign:agent:gall]
+  |=  [=(pole knot) =sign:agent:gall]
   ^-  (quip card _this)
-  |^
-  ?.  ?=([%aqua @ @ ~] wire)
-    (on-agent:def wire sign)
-  =/  id=@ta  i.t.wire
-  =/  branch=@tas  i.t.t.wire
-  =/  got=(unit run:aq)  (~(get by runs.aqua) id)
-  ?~  got  `this
-  =/  r=run:aq  u.got
-  ?:  (terminal:aq status.r)  `this
-  ?-    -.sign
-      %watch-ack
-    ?^  p.sign  (finish id %failed `'subscription rejected' &)
-    ?.  =(%result branch)  `this
-    ?:  ?=(?(%cancelling %finishing) status.r)  `this
-    =.  r  r(status %running, updated now.bowl)
-    `this(aqua aqua(runs (~(put by runs.aqua) id r)))
-  ::
-      %poke-ack
-    ?~  p.sign  `this
-    (finish id %failed `'Spider rejected operation' &)
-  ::
-      %kick
-    ?:  &(=(%result branch) =(%finishing status.r))  `this
-    ?:  =(%cancelling status.r)  (finish id %cancelled ~ |)
-    (finish id %failed `'subscription closed unexpectedly' &)
-  ::
-      %fact
-    ?:  =(%effects branch)
-      ?.  =(%aqua-effect p.cage.sign)  `this
-      ::  Decode the envelope first; runtime-specific tags are opaque.
-      =.  r  (observe:aq r now.bowl +.q.cage.sign)
-      `this(aqua aqua(runs (~(put by runs.aqua) id r)))
-    ?.  =(%result branch)  `this
-    ?:  =(%finishing status.r)  `this
-    ?+    p.cage.sign  `this
-        %thread-done
-      (drain id ?:(=(%cancelling status.r) %cancelled %completed) ~)
-    ::
-        %thread-fail
-      =+  !<([term=@tas =tang] q.cage.sign)
-      ::  Never render a potentially enormous error tang here.
-      ?:  =(%cancelling status.r)  (drain id %cancelled ~)
-      (drain id %failed `(crip "Spider failure: %{(trip (end [3 128] term))}; tang omitted"))
-    ==
+  ?+    pole  (on-agent:def `wire`pole sign)
+      [%aqua id=@ta branch=@ta ~]
+    =/  got=(unit run:aq)  (~(get by runs.aqua) id.pole)
+    ?~  got
+      `this
+    =/  r=run:aq  u.got
+    ?:  (terminal:aq status.r)
+      `this
+    =^  cards  aqua
+      ^-  (quip card state:aq)
+      ?-    -.sign
+          %watch-ack
+        ?^  p.sign
+          (aqua-finish bowl aqua id.pole %failed `'subscription rejected' &)
+        ?.  =(%result branch.pole)
+          `aqua
+        ?:  ?=(?(%cancelling %finishing) status.r)
+          `aqua
+        =.  r  r(status %running, updated now.bowl)
+        `aqua(runs (~(put by runs.aqua) id.pole r))
+      ::
+          %poke-ack
+        ?~  p.sign
+          `aqua
+        (aqua-finish bowl aqua id.pole %failed `'Spider rejected operation' &)
+      ::
+          %kick
+        ?:  &(=(%result branch.pole) =(%finishing status.r))
+          `aqua
+        ?:  =(%cancelling status.r)
+          (aqua-finish bowl aqua id.pole %cancelled ~ |)
+        %:  aqua-finish
+            bowl
+            aqua
+            id.pole
+            %failed
+            `'subscription closed unexpectedly'
+            &
+        ==
+      ::
+          %fact
+        ?:  =(%effects branch.pole)
+          ?.  =(%aqua-effect p.cage.sign)
+            `aqua
+          ::  decode the envelope first; runtime-specific tags are opaque
+          =.  r  (observe:aq r now.bowl +.q.cage.sign)
+          `aqua(runs (~(put by runs.aqua) id.pole r))
+        ?.  =(%result branch.pole)
+          `aqua
+        ?:  =(%finishing status.r)
+          `aqua
+        ?+    p.cage.sign  `aqua
+            %thread-done
+          %:  aqua-drain
+              bowl
+              aqua
+              id.pole
+              ?:(=(%cancelling status.r) %cancelled %completed)
+              ~
+          ==
+        ::
+            %thread-fail
+          ?:  =(%cancelling status.r)
+            (aqua-drain bowl aqua id.pole %cancelled ~)
+          =+  !<([term=@tas =tang] q.cage.sign)
+          ::  never render a potentially enormous error tang here
+          %:  aqua-drain
+              bowl
+              aqua
+              id.pole
+              %failed
+              `(crip "Spider failure: %{(trip (end [3 128] term))}; tang omitted for brevity")
+          ==
+        ==
+      ==
+    [cards this]
   ==
-  ::
-  ++  drain
-    |=  [id=@ta result=status:aq error=(unit @t)]
-    ^-  (quip card _this)
-    =/  r=run:aq  (~(got by runs.aqua) id)
-    =.  r  (begin-finish:aq r now.bowl error)
-    =/  branch=@tas  (drain-branch:aq result)
-    :_  this(aqua aqua(runs (~(put by runs.aqua) id r)))
-    ::  One logical tick in the future forces a new host kernel event.
-    ::  Poke acks can overtake pending facts in the current event's worklist;
-    ::  an external Behn wake cannot. No guest events or quiet-period timer.
-    ~[[%pass /aqua-drain/[id]/[branch] %arvo %b %wait +(now.bowl)]]
-  ::
-  ++  finish
-    |=  [id=@ta result=status:aq error=(unit @t) stop=?]
-    ^-  (quip card _this)
-    =/  r=run:aq  (~(got by runs.aqua) id)
-    :_  this(aqua (complete:aq aqua id now.bowl result error))
-    (aqua-cleanup our.bowl id tid.r stop)
-  --
 ::
 ++  on-leave  on-leave:def
 ++  on-fail   on-fail:def
@@ -478,21 +506,34 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
-  =/  migrated=state-2
-    ?-  -.old
-      %0  [%2 tools.old prompts.old resources.old templates.old sse-sessions.old *state:aq]
-      %1  [%2 tools.old prompts.old resources.old templates.old sse-sessions.old *state:aq]
-      %2  old
+  =/  migrated=state-1
+    ?-    -.old
+        %0
+      :*  %1
+          tools.old
+          prompts.old
+          resources.old
+          templates.old
+          sse-sessions.old
+          *state:aq
+      ==
+    ::
+        %1
+      old
     ==
-  =/  cleanup=(list card)
-    ?~  active.aqua.migrated  ~
-    =/  id=@ta  u.active.aqua.migrated
-    =/  r=run:aq  (~(got by runs.aqua.migrated) id)
-    (aqua-cleanup our.bowl id tid.r &)
-  =?  migrated  ?=(^ active.aqua.migrated)
-    =/  id=@ta  u.active.aqua.migrated
-    migrated(aqua (complete:aq aqua.migrated id now.bowl %interrupted `'agent reloaded; managed thread stopped'))
-  =/  new=state-2
+  ::  a reload orphans the active run's thread; stop and close it
+  =^  cleanup=(list card)  aqua.migrated
+    ?~  active.aqua.migrated
+      `aqua.migrated
+    %:  aqua-finish
+        bowl
+        aqua.migrated
+        u.active.aqua.migrated
+        %interrupted
+        `'agent reloaded; managed thread stopped'
+        &
+    ==
+  =/  new=state-1
     %:  install-defaults
         migrated
         default-tools
@@ -550,7 +591,8 @@
   ^-  (quip card _this)
   |^  ?+  mark
         (on-poke:def mark vase)
-          ::  Ordinary MCP tool threads delegate durable capture to this agent.
+          ::  the aqua/* tool threads return at once, so this agent
+          ::  holds each run's subscriptions and captured effects
           %mcp-aqua
         ?>  =(src our):bowl
         =/  act=action:aq  !<(action:aq vase)
@@ -1559,15 +1601,18 @@
     ?>  ?=([%behn %wake *] sign-arvo)
     =/  wake-error=(unit tang)  +>.sign-arvo
     =/  got=(unit run:aq)  (~(get by runs.aqua) id.pole)
-    ?~  got  `this
-    =/  r=run:aq  u.got
-    ?.  =(%finishing status.r)  `this
+    ?~  got
+      `this
+    ?.  =(%finishing status.u.got)
+      `this
     =/  result=(unit status:aq)  (drain-result:aq branch.pole)
-    ?~  result  `this
-    =/  final=status:aq  ?:(?=(^ wake-error) %failed u.result)
-    =/  error=(unit @t)  ?:(?=(^ wake-error) `'completion wake failed' error.r)
-    :_  this(aqua (complete:aq aqua id.pole now.bowl final error))
-    (aqua-cleanup our.bowl id.pole tid.r ?=(^ wake-error))
+    ?~  result
+      `this
+    =^  cards  aqua
+      ?~  wake-error
+        (aqua-finish bowl aqua id.pole u.result error.u.got |)
+      (aqua-finish bowl aqua id.pole %failed `'completion wake failed' &)
+    [cards this]
   ::
       [%keepalive eyre-id=@ta ~]
     ?>  ?=([%behn %wake *] sign-arvo)
