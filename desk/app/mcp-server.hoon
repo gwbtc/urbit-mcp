@@ -1,7 +1,7 @@
 /-  mcp
 /+  dbug, verb, server, default-agent, pf=pretty-file,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
-    scry-uri=uri-scry
+    scry-uri=uri-scry, aq=mcp-aqua, ma=mcp-arguments
 ::
 ::  default features are imported with /~
 ::  to force rebuilds when they're added or changed
@@ -267,13 +267,13 @@
 +$  card  card:agent:gall
 ::
 ++  install-defaults
-  |=  $:  old=state-0
+  |=  $:  old=state-1
           tools=(list tool:mcp)
           prompts=(list prompt:mcp)
           resources=(list resource:mcp)
           templates=(list template:resource:mcp)
       ==
-  ^-  state-0
+  ^-  state-1
   %=  old
     tools      (merge-features tools tools.old |=(t=tool:mcp name.t))
     prompts    (merge-features prompts prompts.old |=(p=prompt:mcp name.p))
@@ -285,7 +285,7 @@
 ::  classes whose feature set differs between .old and .new
 ::
 ++  load-changed-cards
-  |=  [=bowl:gall old=state-0 new=state-0]
+  |=  [=bowl:gall old=state-1 new=state-1]
   ^-  (list card)
   %-  zing
   ^-  (list (list card))
@@ -317,6 +317,7 @@
   ==
 +$  versioned-state
   $%  state-0
+      state-1
   ==
 +$  state-0
   $:  %0
@@ -327,10 +328,64 @@
       ::  map eyre-id to session:mcp
       sse-sessions=(map @ta session:mcp)
   ==
++$  state-1
+  $:  %1
+      tools=(set tool:mcp)
+      prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
+      templates=(set template:resource:mcp)
+      sse-sessions=(map @ta session:mcp)
+      aqua=state:aq
+  ==
+::
+::  +aqua-cleanup: stop and unsubscribe from one managed run;
+::  the shared %aqua agent and its virtual ships stay up
+++  aqua-cleanup
+  |=  [our=@p id=@ta tid=@ta stop=?]
+  ^-  (list card)
+  %+  weld
+    ^-  (list card)
+    ?:  stop
+      ~[[%pass /aqua/[id]/stop %agent [our %spider] %poke %spider-stop !>([tid |])]]
+    ~
+  ^-  (list card)
+  :~  [%pass /aqua/[id]/result %agent [our %spider] %leave ~]
+      [%pass /aqua/[id]/effects %agent [our %aqua] %leave ~]
+  ==
+::
+::  +aqua-drain: mark a run %finishing and wake one tick from now
+++  aqua-drain
+  |=  [=bowl:gall aqua=state:aq id=@ta result=status:aq error=(unit @t)]
+  ^-  (quip card state:aq)
+  =/  r=run:aq
+    (begin-finish:aq (~(got by runs.aqua) id) now.bowl error)
+  :_  aqua(runs (~(put by runs.aqua) id r))
+  ::  one logical tick in the future forces a new host kernel event.
+  ::  poke acks can overtake pending facts in the current event's
+  ::  worklist; an external behn wake cannot. no guest events or
+  ::  quiet-period timer.
+  :~  :*  %pass  /aqua-drain/[id]/(drain-branch:aq result)
+          %arvo  %b  %wait  +(now.bowl)
+      ==
+  ==
+::
+::  +aqua-finish: record a run's final status and clean up after it
+++  aqua-finish
+  |=  $:  =bowl:gall
+          aqua=state:aq
+          id=@ta
+          result=status:aq
+          error=(unit @t)
+          stop=?
+      ==
+  ^-  (quip card state:aq)
+  :-  (aqua-cleanup our.bowl id tid:(~(got by runs.aqua) id) stop)
+  (complete:aq aqua id now.bowl result error)
 --
+::
 %-  agent:dbug
 ^-  agent:gall
-=|  state-0
+=|  state-1
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
@@ -341,7 +396,87 @@
     default-templates  (weld ~(val by fil-tpl-scry) ~(val by fil-tpl-fine))
     default-resources  :(weld ~(val by fil-res-beam) ~(val by fil-res-scry) ~(val by fil-res-docs))
 ::
-++  on-agent  on-agent:def
+++  on-agent
+  |=  [=(pole knot) =sign:agent:gall]
+  ^-  (quip card _this)
+  ?+    pole  (on-agent:def `wire`pole sign)
+      [%aqua id=@ta branch=@ta ~]
+    =/  got=(unit run:aq)  (~(get by runs.aqua) id.pole)
+    ?~  got
+      `this
+    =/  r=run:aq  u.got
+    ?:  (terminal:aq status.r)
+      `this
+    =^  cards  aqua
+      ^-  (quip card state:aq)
+      ?-    -.sign
+          %watch-ack
+        ?^  p.sign
+          (aqua-finish bowl aqua id.pole %failed `'subscription rejected' &)
+        ?.  =(%result branch.pole)
+          `aqua
+        ?:  ?=(?(%cancelling %finishing) status.r)
+          `aqua
+        =.  r  r(status %running, updated now.bowl)
+        `aqua(runs (~(put by runs.aqua) id.pole r))
+      ::
+          %poke-ack
+        ?~  p.sign
+          `aqua
+        (aqua-finish bowl aqua id.pole %failed `'Spider rejected operation' &)
+      ::
+          %kick
+        ?:  &(=(%result branch.pole) =(%finishing status.r))
+          `aqua
+        ?:  =(%cancelling status.r)
+          (aqua-finish bowl aqua id.pole %cancelled ~ |)
+        %:  aqua-finish
+            bowl
+            aqua
+            id.pole
+            %failed
+            `'subscription closed unexpectedly'
+            &
+        ==
+      ::
+          %fact
+        ?:  =(%effects branch.pole)
+          ?.  =(%aqua-effect p.cage.sign)
+            `aqua
+          ::  decode the envelope first; runtime-specific tags are opaque
+          =.  r  (observe:aq r now.bowl +.q.cage.sign)
+          `aqua(runs (~(put by runs.aqua) id.pole r))
+        ?.  =(%result branch.pole)
+          `aqua
+        ?:  =(%finishing status.r)
+          `aqua
+        ?+    p.cage.sign  `aqua
+            %thread-done
+          %:  aqua-drain
+              bowl
+              aqua
+              id.pole
+              ?:(=(%cancelling status.r) %cancelled %completed)
+              ~
+          ==
+        ::
+            %thread-fail
+          ?:  =(%cancelling status.r)
+            (aqua-drain bowl aqua id.pole %cancelled ~)
+          =+  !<([term=@tas =tang] q.cage.sign)
+          ::  never render a potentially enormous error tang here
+          %:  aqua-drain
+              bowl
+              aqua
+              id.pole
+              %failed
+              `(crip "Spider failure: %{(trip (end [3 128] term))}; tang omitted for brevity")
+          ==
+        ==
+      ==
+    [cards this]
+  ==
+::
 ++  on-leave  on-leave:def
 ++  on-fail   on-fail:def
 ++  on-save
@@ -371,25 +506,49 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
-  ?-    -.old
-      %0
-    =/  new=state-0
-      %:  install-defaults
-          old
-          default-tools
-          default-prompts
-          default-resources
-          default-templates
+  =/  migrated=state-1
+    ?-    -.old
+        %0
+      :*  %1
+          tools.old
+          prompts.old
+          resources.old
+          templates.old
+          sse-sessions.old
+          *state:aq
       ==
-    :_  this(state new)
-    %+  weld
-      ^-  (list card)
-      :~  mcp-card
-          oauth-card
-          well-known-card
-      ==
-    (load-changed-cards bowl old new)
-  ==
+    ::
+        %1
+      old
+    ==
+  ::  a reload orphans the active run's thread; stop and close it
+  =^  cleanup=(list card)  aqua.migrated
+    ?~  active.aqua.migrated
+      `aqua.migrated
+    %:  aqua-finish
+        bowl
+        aqua.migrated
+        u.active.aqua.migrated
+        %interrupted
+        `'agent reloaded; managed thread stopped'
+        &
+    ==
+  =/  new=state-1
+    %:  install-defaults
+        migrated
+        default-tools
+        default-prompts
+        default-resources
+        default-templates
+    ==
+  :_  this(state new)
+  %+  weld
+    ^-  (list card)
+    :~  mcp-card
+        oauth-card
+        well-known-card
+    ==
+  (weld cleanup (load-changed-cards bowl migrated new))
 ::
 ++  on-init
   ^-  (quip card _this)
@@ -432,6 +591,43 @@
   ^-  (quip card _this)
   |^  ?+  mark
         (on-poke:def mark vase)
+          ::  the aqua/* tool threads return at once, so this agent
+          ::  holds each run's subscriptions and captured effects
+          %mcp-aqua
+        ?>  =(src our):bowl
+        =/  act=action:aq  !<(action:aq vase)
+        ?-    -.act
+            %start
+          ?>  ?=(~ active.aqua)
+          ?>  !(~(has by runs.aqua) id.act)
+          ?>  &((lte (met 3 id.act) 128) (lte (met 3 desk.act) 128) (lte (met 3 term.act) 128))
+          ?>  (lte (lent effects.act) 16)
+          ?>  (levy effects.act |=(e=@tas (matches-effect:aq supported-effects:aq e)))
+          =/  kept=state:aq  (retain:aq aqua)
+          =/  tid=@ta  (cat 3 'mcp-aqua-' id.act)
+          =/  r=run:aq
+            [id.act tid desk.act term.act %starting now.bowl now.bowl 0 0 0 ~ ~ effects.act 0 ~]
+          :_  this(aqua kept(runs (~(put by runs.kept) id.act r), active `id.act))
+          :~  [%pass /aqua/[id.act]/effects %agent [our.bowl %aqua] %watch /effect]
+              [%pass /aqua/[id.act]/result %agent [our.bowl %spider] %watch /thread-result/[tid]]
+              :*  %pass  /aqua/[id.act]/start  %agent  [our.bowl %spider]  %poke
+                  %spider-start  !>([~ `tid [our.bowl desk.act da+now.bowl] term.act arg.act])
+              ==
+          ==
+        ::
+            %cancel
+          =/  r=run:aq  (~(got by runs.aqua) id.act)
+          ?:  |((terminal:aq status.r) ?=(?(%cancelling %finishing) status.r))  `this
+          =/  pending=run:aq  r
+          =.  pending  pending(status %cancelling, updated now.bowl)
+          :_  this(aqua aqua(runs (~(put by runs.aqua) id.act pending)))
+          ~[[%pass /aqua/[id.act]/stop %agent [our.bowl %spider] %poke %spider-stop !>([tid.r |])]]
+        ::
+            %release
+          =/  r=run:aq  (~(got by runs.aqua) id.act)
+          ?>  (terminal:aq status.r)
+          `this(aqua aqua(runs (~(del by runs.aqua) id.act)))
+        ==
       ::
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
@@ -1315,29 +1511,10 @@
             ~
           ?~  args-map
             (send-event eyre-id (params:error:rpc p.u.id 'Invalid arguments' ~))
-          =>  |%
-              ++  parse-arg
-                |=  jon=json
-                ^-  argument:tool:mcp
-                ?+  jon
-                  ~
-                ::
-                    [%a *]
-                  [%array (turn p.jon parse-arg)]
-                ::
-                    [%b ?]
-                  [%boolean p.jon]
-                ::
-                    [%o *]
-                  [%object (~(run by p.jon) parse-arg)]
-                ::
-                    [%n @ta]
-                  [%number (slav %ud p.jon)]
-                ::
-                    [%s @t]
-                  [%string p.jon]
-                ==
-              --
+          =/  parsed=(unit (map @t argument:tool:mcp))
+            (parse-args:ma u.args-map)
+          ?~  parsed
+            (send-event eyre-id (params:error:rpc p.u.id 'Invalid tool arguments: numbers must be unsigned decimal integers' ~))
           ^-  (list card)
           ::  When the client accepts SSE (the MCP streamable-HTTP spec
           ::  says it must for POST), answer with an SSE stream and ping
@@ -1351,7 +1528,7 @@
                 %arvo  %k
                 %lard  q.byk.bowl
                 %-  thread-builder.i.tool-results
-                (~(run by u.args-map) parse-arg)
+                u.parsed
             ==
           ?.  sse
             ~[run-tool]
@@ -1366,6 +1543,12 @@
   |=  =(pole knot)
   ^-  (unit (unit cage))
   ?+  pole  (on-peek:def `path`pole)
+      [%x %aqua %read encoded=@ta ~]
+    ::  Tool encodes a small query in the scry path; no query state needed.
+    ?>  (lte (met 3 encoded.pole) 4.096)
+    =/  q=query:aq  ;;(query:aq (cue (slav %uv encoded.pole)))
+    ?>  &((lte (lent ships.q) 32) (lte (lent effects.q) 16) (lte (met 3 id.q) 128))
+    ``json+!>((read-json:aq aqua q))
     ::
     ::  .^(json %gx /=mcp-server=/mcp/tools/json)
     ::  .^((list tool:mcp) %gx /=mcp-server=/mcp/tools/noun)
@@ -1413,6 +1596,23 @@
   ^-  (quip card _this)
   ?+  pole
     `this
+  ::
+      [%aqua-drain id=@ta branch=@tas ~]
+    ?>  ?=([%behn %wake *] sign-arvo)
+    =/  wake-error=(unit tang)  +>.sign-arvo
+    =/  got=(unit run:aq)  (~(get by runs.aqua) id.pole)
+    ?~  got
+      `this
+    ?.  =(%finishing status.u.got)
+      `this
+    =/  result=(unit status:aq)  (drain-result:aq branch.pole)
+    ?~  result
+      `this
+    =^  cards  aqua
+      ?~  wake-error
+        (aqua-finish bowl aqua id.pole u.result error.u.got |)
+      (aqua-finish bowl aqua id.pole %failed `'completion wake failed' &)
+    [cards this]
   ::
       [%keepalive eyre-id=@ta ~]
     ?>  ?=([%behn %wake *] sign-arvo)

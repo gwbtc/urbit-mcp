@@ -61,6 +61,34 @@ The edit–build–test loop, entirely through MCP:
 5. `dojo/nuke-agent` and `dojo/revive-desk` to restart agents and fix
    `%load-failed` errors.
 
+### Run Aqua tests
+
+Aqua boots virtual ships inside the `%aqua` agent; `/ted/ph` threads drive
+them. The `aqua/*` tools run such a thread in the background and capture what
+the virtual ships print.
+
+1. `aqua/pill` builds a brass pill and loads it into `%aqua`. `%aqua` must be
+   running from `%base`; the tool says so if it is not. Rebuild the pill after
+   changing a desk the virtual ships boot with.
+2. `aqua/start` with `desk` and `path` (e.g. `/ted/ph/add`) returns a `runId`
+   at once. One run is active at a time.
+3. `aqua/read` with the `runId` returns one page of the run:
+   - `status`: `starting`, `running`, `cancelling`, and `finishing` mean the
+     run is still going. `finishing` drains pending effects. `completed`,
+     `failed`, `cancelled`, and `interrupted` are final.
+   - `records`: each has `cursor`, `ship`, `effect`, `type`, `text`,
+     `observedAt`, `elapsedMs`, and `truncated`. The times are when the host
+     saw the effect, not virtual-ship time.
+   - `nextCursor`: pass it as `cursor` on the next read. It is exclusive, and
+     it moves past records your `ships` and `effects` filters dropped. Reuse
+     an old cursor to read the same records with other filters.
+   - `hasMore`: more records are buffered now. It says nothing about whether
+     the thread has finished; poll until `status` is final.
+   - `gap`: present when the server evicted records before your cursor.
+   - Only effect tags named at `aqua/start` are captured.
+4. `aqua/cancel` stops the thread, not `%aqua` or its ships. `aqua/release`
+   drops a finished run's records; the server keeps at most four runs.
+
 ### Extend the MCP server
 
 Add or import tools, prompts, resources, and resource templates at runtime —
