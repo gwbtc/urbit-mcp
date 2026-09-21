@@ -6,15 +6,36 @@ on:
 
 env:
   DESK:      mcp
-  SCREEN:    sponsor
-  SHIP_HOST: root@${{ vars.SPONSOR_IP }}
-  PIER_PATH: /root
-  PIER:      sponsor
   DIST_PIER: ${{ vars.SPONSOR_URBIT_ID_NO_TILDE }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name:      sponsor
+            screen:    sponsor
+            user:      root
+            ip:        ${{ vars.SPONSOR_IP }}
+            pier_path: /root
+            pier:      sponsor
+            ssh_key:   SPONSOR_VPS_SSH_KEY
+          - name:      daplyd
+            screen:    daplyd
+            user:      tyr
+            ip:        ${{ vars.DAPLYD_IP }}
+            pier_path: /home/tyr
+            pier:      daplyd
+            ssh_key:   SSH_DAPLYD
+    name: deploy (${{ matrix.name }})
+    env:
+      SCREEN:    ${{ matrix.screen }}
+      SHIP_IP:   ${{ matrix.ip }}
+      SHIP_HOST: ${{ matrix.user }}@${{ matrix.ip }}
+      PIER_PATH: ${{ matrix.pier_path }}
+      PIER:      ${{ matrix.pier }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,9 +56,9 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.SPONSOR_VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets[matrix.ssh_key] }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ vars.SPONSOR_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${SHIP_IP} >> ~/.ssh/known_hosts
 
       - name: Clear deployed desk
         run: ssh ${SHIP_HOST} "find ${PIER_PATH}/${PIER}/${DESK} -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
