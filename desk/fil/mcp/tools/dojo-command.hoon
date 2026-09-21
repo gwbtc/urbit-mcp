@@ -1,5 +1,5 @@
 /-  mcp, sole, spider
-/+  io=strandio, libstrand=strand
+/+  io=strandio, libstrand=strand, dj=mcp-dojo
 =,  sole
 =,  strand=strand:libstrand
 =>
@@ -78,6 +78,38 @@
     %sag  [[p.fec (jam q.fec)] ~]
   ==
 ::
+::
+::  +end: why collection stopped. %more is dojo's continuation
+::  prompt: it holds a half-entered expression and wants another line
++$  end  ?(%prompt %more %error %timeout)
+::
+++  styx-tape
+  |=  a=styx
+  ^-  tape
+  %-  zing
+  %+  turn  a
+  |=  b=$@(@t (pair styl styx))
+  ?@(b (trip b) ^$(a q.b))
+::
+::  +effect-end: dojo answers a line with a prompt, or with a bare
+::  %err when the line does not parse
+++  effect-end
+  |=  fec=sole-effect
+  ^-  (unit end)
+  ?+    -.fec  ~
+      %err  `%error
+      %pro
+    ?:  =("< " (flop (scag 2 (flop (styx-tape cad.fec)))))
+      `%more
+    `%prompt
+  ::
+      %mor
+    %+  roll  p.fec
+    |=  [f=sole-effect out=(unit end)]
+    =/  new=(unit end)  (effect-end f)
+    ?~(new out new)
+  ==
+::
 ++  is-pro
   |=  fec=sole-effect
   ^-  ?
@@ -124,6 +156,12 @@
     ?.  =(%sole-effect p.cage.sign.u.in.tin)
       `[%skip ~]
     `[%done !<(sole-effect q.cage.sign.u.in.tin)]
+  ::
+  ::  %mcp-server kicks us when it drops the session
+      [~ %agent * %kick *]
+    ?.  =(watch+wire wire.u.in.tin)
+      `[%skip ~]
+    `[%fail %dojo-session-closed ~]
   ==
 ::
 ++  take-output
@@ -139,6 +177,11 @@
     ?.  =(%sole-effect p.cage.sign.u.in.tin)
       `[%skip ~]
     `[%done [%& !<(sole-effect q.cage.sign.u.in.tin)]]
+  ::
+      [~ %agent * %kick *]
+    ?.  =(watch+wire wire.u.in.tin)
+      `[%skip ~]
+    `[%fail %dojo-session-closed ~]
   ::
       [~ %sign *]
     ?.  =(/dill-logs wire.u.in.tin)
@@ -195,16 +238,16 @@
     |=([seg=@ta out=_(trip i.path)] "{out}.{(trip seg)}")
   ".urb/put/{file}"
 ::
-::  +collect-output-until-pro: gather output until Dojo reports its
+::  +collect-output: gather output until Dojo reports its
 ::  next prompt, which means the command finished. Returning on mere
 ::  idleness breaks long-running commands: we would leave the %sole
 ::  subscription while the command still runs, and Dojo's later %fact
 ::  into the dead subscription desyncs it from drum. The timeout only
 ::  caps silence between effects.
 ::
-++  collect-output-until-pro
+++  collect-output
   |=  [=wire limit=@dr]
-  =/  m  (strand ,[lines=(list cord) saved=(list path)])
+  =/  m  (strand ,[lines=(list cord) saved=(list path) =end])
   =|  lines=(list cord)
   =|  saved=(list path)
   |-  ^-  form:m
@@ -215,40 +258,90 @@
     ;<  out=(each sole-effect told:dill)  bind:m  (take-output wire)
     (pure:m `out)
   ?~  maybe
-    (pure:m [lines saved])
+    (pure:m [lines saved %timeout])
   ?-    -.u.maybe
       %&
     =/  saves=(list [=path atom=@])  (effect-saves p.u.maybe)
     ;<  ~  bind:m  (forward-saves saves)
     =.  lines  (weld lines (effect-lines p.u.maybe))
     =.  saved  (weld saved (turn saves head))
-    ?:  (is-pro p.u.maybe)
-      (pure:m [lines saved])
+    =/  end=(unit end)  (effect-end p.u.maybe)
+    ?^  end
+      (pure:m [lines saved u.end])
     $
   ::
       %|
     $(lines (weld lines (log-lines p.u.maybe)))
   ==
+::
+::  +run-lines: feed dojo one line at a time, as a terminal would,
+::  waiting for its answer to each. dojo itself joins the lines of a
+::  tall expression; separate commands run in turn and share state.
+::
+++  run-lines
+  |=  [=wire ses=@ta todo=wain limit=@dr]
+  =/  m  (strand ,[lines=(list cord) saved=(list path)])
+  =|  [lines=(list cord) saved=(list path)]
+  |-  ^-  form:m
+  ?~  todo
+    (pure:m [lines saved])
+  ;<  ~  bind:m
+    (poke-our:io %mcp-server %mcp-dojo !>(`action:dj`[%input ses i.todo]))
+  ;<  [new=(list cord) sav=(list path) =end]  bind:m
+    (collect-output wire limit)
+  =.  lines  (weld lines new)
+  =.  saved  (weld saved sav)
+  ?:  |(?=(%prompt end) &(?=(%more end) ?=(^ t.todo)))
+    $(todo t.todo)
+  ?:  ?=(%timeout end)
+    %-  pure:m
+    :_  saved
+    (snoc lines 'dojo: no prompt before the timeout')
+  ::  leave no half-entered expression behind for the next command
+  ;<  ~  bind:m
+    (poke-our:io %mcp-server %mcp-dojo !>(`action:dj`[%clear ses]))
+  ;<  *  bind:m  (collect-until-pro wire ~s5)
+  %-  pure:m
+  :_  saved
+  %+  snoc  lines
+  ?:  ?=(%more end)
+    'dojo: input ended mid-expression; discarded'
+  (rap 3 'dojo: stopped at: ' i.todo ~)
 --
 ::
 ^-  tool:mcp
 :*  'dojo/command'
   '''
-  Run one string in Dojo through the %sole command-line protocol and return
-  the text emitted before Dojo reports the next prompt.
+  Run input in Dojo through the %sole command-line protocol and return
+  the text Dojo prints. Input may span lines: each line is entered in
+  turn, as if typed at a terminal, so a tall-form expression may span
+  lines, and several commands run in order and share Dojo state
+  (e.g. "=foo 1" then "(add foo 2)"). A parse error stops the run.
   '''
   %-  my
   :~  :-  'command'
       :-  %string
       '''
       The Dojo input to run, e.g. "(add 2 2)" or "'hello world'".
+      Blank lines are skipped.
       '''
       :-  'timeout-seconds'
       :-  %number
       '''
       Optional timeout in seconds. Caps the silence between pieces of
       Dojo output, not the total run time; collection ends when Dojo
-      shows its next prompt. Defaults to 10.
+      shows its next prompt. Defaults to 10. On timeout a fresh session
+      is dropped and its command stopped; a named session runs on.
+      '''
+      :-  'sole-id'
+      :-  %string
+      '''
+      Optional session name: lowercase letters, digits, "-", "." and "_".
+      Without it each call gets a fresh Dojo session, dropped at the end.
+      With it the session stays open, so later calls with the same name
+      see variables and other Dojo state set by earlier ones. At most 8
+      sessions stay open; the least recently used is dropped first. Drop
+      one yourself with dojo/close.
       '''
   ==
   ~['command']
@@ -261,43 +354,67 @@
   ?~  cmd
     (pure:m !>([%error %missing-command ~]))
   ?>  ?=([%string @t] u.cmd)
+  =/  lines=wain
+    %+  skip  (to-wain:format p.u.cmd)
+    |=(l=@t (levy (trip l) |=(c=@ =(' ' c))))
+  ?~  lines
+    (pure:m !>(`response:tool:mcp`[%error 'command is empty' ~]))
   =/  timeout=@dr
     =/  arg=(unit argument:tool:mcp)  (~(get by args) 'timeout-seconds')
     ?~  arg
       ~s10
     ?>  ?=([%number @] u.arg)
     (mul ~s1 p.u.arg)
+  =/  name=(unit argument:tool:mcp)  (~(get by args) 'sole-id')
+  ?>  ?=(?(~ [~ %string @t]) name)
+  ?:  &(?=(^ name) !(valid-name:dj p.u.name))
+    (pure:m !>(`response:tool:mcp`[%error 'invalid sole-id' ~]))
   ;<  bowl=bowl:rand  bind:m  get-bowl:io
-  =/  ses=@ta  (scot %ta (cat 3 'mcp-dojo-' (scot %uv (sham eny.bowl))))
-  =/  id=sole-id  [our.bowl ses]
-  =/  wire=wire   /dojo-command/[ses]
-  ;<  ~  bind:m  (watch-our:io wire %dojo /sole/(scot %p our.bowl)/[ses])
-  ;<  *  bind:m  (collect-until-pro wire ~s5)
+  =/  ses=@ta
+    ?^  name
+      p.u.name
+    (cat 3 'tmp-' (scot %uv (sham eny.bowl)))
+  =/  wire=wire  /dojo-command/[ses]
+  ::  %mcp-server holds the %sole subscription, so a named session
+  ::  outlives this thread; a fresh one greets us with a prompt
+  ;<  held=(unit ?)  bind:m
+    (scry:io (unit ?) %gx /mcp-server/dojo/[ses]/noun)
+  ?:  =(`| held)
+    %-  pure:m
+    !>  ^-  response:tool:mcp
+    :+  %error
+      'dojo session is busy with an earlier command; retry, or drop it with dojo/close'
+    ~
+  ;<  ~  bind:m  (watch-our:io wire %mcp-server /dojo/[ses])
+  ;<  *  bind:m
+    ?^  held
+      (pure:(strand ,[(list cord) ?]) [~ &])
+    (collect-until-pro wire ~s5)
   ;<  ~  bind:m
     (send-raw-card:io [%pass /dill-logs %arvo %d %logs `~])
-  ;<  ~  bind:m
-    %+  poke-our:io  %dojo
-    :-  %sole-action
-    !>  ^-  sole-action
-    [id %det [[0 0] 0v0 [%set (tuba (trip p.u.cmd))]]]
-  ;<  ~  bind:m
-    %+  poke-our:io  %dojo
-    :-  %sole-action
-    !>  ^-  sole-action
-    [id %ret ~]
   ;<  [result=(list cord) saved=(list path)]  bind:m
-    (collect-output-until-pro wire timeout)
+    (run-lines wire ses lines timeout)
   ;<  ~  bind:m
     (send-raw-card:io [%pass /dill-logs %arvo %d %logs ~])
-  ;<  ~  bind:m  (leave-our:io wire %dojo)
+  ;<  ~  bind:m  (leave-our:io wire %mcp-server)
+  ;<  ~  bind:m
+    ?^  name
+      (pure:(strand ,~) ~)
+    (poke-our:io %mcp-server %mcp-dojo !>(`action:dj`[%close ses]))
   %-  pure:m
   !>  ^-  response:tool:mcp
   :-  %result
   :-  %structured
   %-  pairs:enjs:format
-  %+  weld
+  ;:  weld
     `(list [@t json])`['dojo-output' s+(of-wain:format result)]~
-  ^-  (list [@t json])
-  ?~  saved  ~
-  ['saved-files' a+(turn saved |=(=path s+(unix-name path)))]~
+  ::
+    ^-  (list [@t json])
+    ?~  name  ~
+    ['sole-id' s+ses]~
+  ::
+    ^-  (list [@t json])
+    ?~  saved  ~
+    ['saved-files' a+(turn saved |=(=path s+(unix-name path)))]~
+  ==
 ==
