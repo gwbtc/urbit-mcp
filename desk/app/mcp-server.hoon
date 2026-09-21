@@ -1,7 +1,7 @@
-/-  mcp
+/-  mcp, sole
 /+  dbug, verb, server, default-agent, pf=pretty-file,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
-    scry-uri=uri-scry, aq=mcp-aqua, ma=mcp-arguments
+    scry-uri=uri-scry, aq=mcp-aqua, dj=mcp-dojo, ma=mcp-arguments
 ::
 ::  default features are imported with /~
 ::  to force rebuilds when they're added or changed
@@ -336,6 +336,19 @@
       templates=(set template:resource:mcp)
       sse-sessions=(map @ta session:mcp)
       aqua=state:aq
+      dojo=state:dj
+  ==
+::
+::  +dojo-drop: stop a held dojo session's
+::  work, leave it, and kick its watchers
+++  dojo-drop
+  |=  [our=@p ses=@ta]
+  ^-  (list card)
+  :~  :*  %pass  /dojo/[ses]  %agent  [our %dojo]  %poke  %sole-action
+          !>(`sole-action:sole`[[our (dojo-ses:dj ses)] %clr ~])
+      ==
+      [%pass /dojo/[ses] %agent [our %dojo] %leave ~]
+      [%give %kick ~[/dojo/[ses]] ~]
   ==
 ::
 ::  +aqua-cleanup: stop and unsubscribe from one managed run;
@@ -400,6 +413,44 @@
   |=  [=(pole knot) =sign:agent:gall]
   ^-  (quip card _this)
   ?+    pole  (on-agent:def `wire`pole sign)
+  ::
+  ::  relay a held dojo session to the threads watching it
+      [%dojo ses=@ta ~]
+    ?-    -.sign
+        %fact
+      ?.  =(%sole-effect p.cage.sign)
+        `this
+      =/  got=(unit session:dj)  (~(get by dojo) ses.pole)
+      ?~  got
+        `this
+      =/  new=(unit session:dj)
+        (observe:dj u.got !<(sole-effect:sole q.cage.sign))
+      ::  our clock has lost step with dojo's and cannot recover
+      ?~  new
+        %-  (slog leaf+"mcp: dojo session {(trip ses.pole)} lost sync; dropped" ~)
+        :-  (dojo-drop our.bowl ses.pole)
+        this(dojo (~(del by dojo) ses.pole))
+      :-  [%give %fact ~[/dojo/[ses.pole]] cage.sign]~
+      this(dojo (~(put by dojo) ses.pole u.new))
+    ::
+    ::  a rejected edit means our clock is wrong for good
+        %poke-ack
+      ?:  |(?=(~ p.sign) !(~(has by dojo) ses.pole))
+        `this
+      :-  (dojo-drop our.bowl ses.pole)
+      this(dojo (~(del by dojo) ses.pole))
+    ::
+        %watch-ack
+      ?~  p.sign
+        `this
+      :-  [%give %kick ~[/dojo/[ses.pole]] ~]~
+      this(dojo (~(del by dojo) ses.pole))
+    ::
+        %kick
+      :-  [%give %kick ~[/dojo/[ses.pole]] ~]~
+      this(dojo (~(del by dojo) ses.pole))
+    ==
+  ::
       [%aqua id=@ta branch=@ta ~]
     =/  got=(unit run:aq)  (~(get by runs.aqua) id.pole)
     ?~  got
@@ -516,6 +567,7 @@
           templates.old
           sse-sessions.old
           *state:aq
+          *state:dj
       ==
     ::
         %1
@@ -591,6 +643,40 @@
   ^-  (quip card _this)
   |^  ?+  mark
         (on-poke:def mark vase)
+          ::  dojo/* tool threads send lines to, and close,
+          ::  the dojo sessions this agent holds
+          %mcp-dojo
+        ?>  =(src our):bowl
+        =/  act=action:dj  !<(action:dj vase)
+        ?-    -.act
+            %close
+          :-  (dojo-drop our.bowl ses.act)
+          this(dojo (~(del by dojo) ses.act))
+        ::
+            %clear
+          ?>  (~(has by dojo) ses.act)
+          :_  this
+          :~  :*  %pass  /dojo/[ses.act]  %agent  [our.bowl %dojo]  %poke
+                  %sole-action
+                  !>(`sole-action:sole`[[our.bowl (dojo-ses:dj ses.act)] %clr ~])
+              ==
+          ==
+        ::
+            %input
+          =/  old=session:dj  (~(got by dojo) ses.act)
+          ?>  ready.old
+          =^  cal=sole-change:sole  old  (input:dj old now.bowl txt.act)
+          =/  id=sole-id:sole  [our.bowl (dojo-ses:dj ses.act)]
+          :_  this(dojo (~(put by dojo) ses.act old))
+          :~  :*  %pass  /dojo/[ses.act]  %agent  [our.bowl %dojo]
+                  %poke  %sole-action  !>(`sole-action:sole`[id %det cal])
+              ==
+              :*  %pass  /dojo/[ses.act]  %agent  [our.bowl %dojo]
+                  %poke  %sole-action  !>(`sole-action:sole`[id %ret ~])
+              ==
+          ==
+        ==
+      ::
           ::  the aqua/* tool threads return at once, so this agent
           ::  holds each run's subscriptions and captured effects
           %mcp-aqua
@@ -1543,6 +1629,14 @@
   |=  =(pole knot)
   ^-  (unit (unit cage))
   ?+  pole  (on-peek:def `path`pole)
+    ::
+    ::  .^((unit ?) %gx /=mcp-server=/dojo/[ses]/noun)
+    ::  ~ if no such session is held, else whether it will take a line
+      [%x %dojo ses=@ta ~]
+    :^  ~  ~  %noun
+    !>  ^-  (unit ?)
+    (bind (~(get by dojo) ses.pole) |=(s=session:dj ready.s))
+    ::
       [%x %aqua %read encoded=@ta ~]
     ::  Tool encodes a small query in the scry path; no query state needed.
     ?>  (lte (met 3 encoded.pole) 4.096)
@@ -1989,5 +2083,22 @@
   ?+    pole  (on-watch:def `path`pole)
       [%http-response eyre-id=@ta ~]
     `this
+  ::
+  ::  the first watch opens the dojo session; later watchers join it
+      [%dojo ses=@ta ~]
+    ?>  =(src our):bowl
+    ?>  (valid-name:dj ses.pole)
+    ?:  (~(has by dojo) ses.pole)
+      `this
+    =^  evicted=(list @ta)  dojo  (retain:dj dojo)
+    :_  this(dojo (~(put by dojo) ses.pole [*sole-share:sole | now.bowl]))
+    %+  weld
+      ^-  (list card)
+      (zing (turn evicted (cury dojo-drop our.bowl)))
+    ^-  (list card)
+    :~  :*  %pass  /dojo/[ses.pole]  %agent  [our.bowl %dojo]
+            %watch  /sole/(scot %p our.bowl)/(dojo-ses:dj ses.pole)
+        ==
+    ==
   ==
 --

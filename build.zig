@@ -43,6 +43,7 @@ const dependencies = [_]RepoImport{
             "lib/default-agent.hoon",
             "lib/server.hoon",
             "lib/skeleton.hoon",
+            "lib/sole.hoon",
             "lib/strand.hoon",
             "lib/strandio.hoon",
             "lib/test.hoon",

@@ -15,8 +15,11 @@ tool `mcp/scry-agent`.
 
 1. **Prefer the specific tool over `dojo/command`.** A scry, poke, file read,
    or desk commit each has its own tool with structured errors. Fall back to
-   `dojo/command` only when no dedicated tool fits. Note that each
-   `dojo/command` call is its own session; you cannot do multi-line inputs.
+   `dojo/command` only when no dedicated tool fits. Its input may span
+   lines: a tall-form expression, or several commands that run in order
+   and share state (`=foo 1`, then `(add foo 2)`). Each call gets a fresh
+   Dojo session unless you pass `sole-id`; calls that share a `sole-id`
+   share variables. Drop a named session with `dojo/close`.
 2. **Verify Hoon on the ship.** After changing desk files that don't show up
    in the results of a `mcp/commit-desk` call, check with `mcp/test-build` or
    by committing the desk and reading the error output — nothing else proves
@@ -44,8 +47,8 @@ tool `mcp/scry-agent`.
 
 - Poke an agent: `mcp/poke-our-agent` with `agent`, `mark`, and `data` (a
   Hoon expression of the mark's type).
-- Anything else: `dojo/command` with one Dojo line; the tool returns the text
-  Dojo printed before its next prompt.
+- Anything else: `dojo/command`; the tool enters each line of input in turn
+  and returns the text Dojo printed.
 
 ### Develop Hoon on a desk
 
