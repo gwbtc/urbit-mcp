@@ -1,7 +1,8 @@
-/-  mcp, sole
-/+  dbug, verb, server, default-agent, pf=pretty-file,
+/-  mcp, sole, spider
+/+  dbug, verb, server, default-agent, pf=pretty-file, io=strandio,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
-    scry-uri=uri-scry, aq=mcp-aqua, dj=mcp-dojo, ma=mcp-arguments
+    scry-uri=uri-scry, aq=mcp-aqua, dj=mcp-dojo, ma=mcp-arguments,
+    mm=mcp-mime
 ::
 ::  default features are imported with /~
 ::  to force rebuilds when they're added or changed
@@ -91,54 +92,110 @@
     (loopback-authority (slag 8 origin-tape))
   %.n
 ::
-++  page-to-mime
-  |=  [our=@p desk=@tas now=@da =page]
-  ^-  mime
-  ?:  =(%mime p.page)
-    ;;(mime q.page)
-  =/  =dais:clay
-    .^(dais:clay %cb /(scot %p our)/[desk]/(scot %da now)/[p.page])
-  =/  vax=vase  (vale:dais q.page)
-  =/  =tube:clay
-    .^(tube:clay %cc /(scot %p our)/[desk]/(scot %da now)/[p.page]/mime)
-  !<(mime (tube vax))
 ::
-++  fine-result
-  |=  [our=@p desk=@tas now=@da rpc-id=@ta uri=@t =page]
-  ^-  json
-  =/  mime-result
-    %-  mule
-    |.
-    (page-to-mime our desk now page)
-  ?-  -.mime-result
-  ::
-      %|
-    %-  internal:error:rpc
-    :+  rpc-id
-        (crip "Could not convert fine resource mark %{<p.page>} to %mime; ensure this desk has /mar/%{<p.page>}/hoon with +mime:grow arm")
-    %-  some
-    %-  pairs:enjs:format
-    :~  ['uri' s+uri]
-        ['mark' s+(crip (trip p.page))]
+::  +local-desk: .desk if this ship has it, else %base
+++  local-desk
+  |=  [our=@p now=@da =desk]
+  ^-  ^desk
+  ?:  (~(has in .^((set ^desk) %cd /(scot %p our)//(scot %da now))) desk)
+    desk
+  %base
+::
+::  +read-card: answer resources/read with the page .get reads at .uri
+::  and the thread's time, converted to %mime with the marks in the
+::  beak .get names, or with .fail's json. both run on a thread, where
+::  a failed scry in .get fails the thread instead of the agent's event
+++  read-card
+  |=  [eyre-id=@ta rpc-id=@ta uri=@t get=$-(@da [beak page]) fail=$-(tang json)]
+  ^-  card
+  :*  %pass  /response/resource/mime/[eyre-id]/[rpc-id]
+      %arvo  %k  %lard  %base
+      =/  m  (strand:spider ,vase)
+      ^-  form:m
+      ;<  now=@da  bind:m  get-time:io
+      =/  [=beak =page]  (get now)
+      ;<  res=(each mime tang)  bind:m  (page-to-mime:mm beak page)
+      %-  pure:m
+      !>  ^-  json
+      ?-  -.res
+        %|  (fail p.res)
+        %&  (result:rpc rpc-id (frond:enjs:format 'contents' a+~[(contents:mm uri p.res)]))
+      ==
+  ==
+::
+::  +clay-read: answer resources/read with a clay read of .uri,
+::  converted with the marks in .desk or else pretty-printed
+++  clay-read
+  |=  [our=@p now=@da eyre-id=@ta rpc-id=@ta uri=@t =desk =riot:clay]
+  ^-  (list card)
+  ?~  riot
+    %+  send-event
+      eyre-id
+    %+  result:rpc
+      rpc-id
+    %+  frond:enjs:format
+      'contents'
+    :-  %a
+    :~  %-  pairs:enjs:format
+        :~  ['uri' s+uri]
+            ['mimeType' s+'text/plain']
+            ['text' s+'Failed to fetch file.']
+        ==
     ==
-  ::
-      %&
-  =/  =mime  p.mime-result
-  %-  result:rpc
-  :-  rpc-id
-  %-  pairs:enjs:format
-  :~  :-  'contents'
+  :_  ~
+  %:  read-card
+      eyre-id
+      rpc-id
+      uri
+      |=(@da [[our (local-desk our now desk) da+now] p.r.u.riot q.q.r.u.riot])
+      |=  tang
+      %+  result:rpc
+        rpc-id
+      %+  frond:enjs:format
+        'contents'
       :-  %a
       :~  %-  pairs:enjs:format
           :~  ['uri' s+uri]
-              ['mimeType' s+(rsh 3^1 (spat p.mime))]
-              :-  'blob'
-              :-  %s
-              %-  en:base64:mimes:html
-              q.mime
+              ['mimeType' s+(mark-mime p.r.u.riot)]
+              :-  'text'
+              s+(of-wain:format (print-tang-to-wain (pretty-file:pf !<(noun q.r.u.riot))))
           ==
       ==
   ==
+::
+::  +fine-read: answer resources/read with a remote scry result,
+::  converted with the marks of the matching local desk (or the local
+::  agent's desk), else %base
+++  fine-read
+  |=  [our=@p now=@da eyre-id=@ta rpc-id=@ta uri=@t =spar:ames =page]
+  ^-  card
+  =/  pax=(pole knot)  path.spar
+  =/  =desk
+    %^  local-desk  our  now
+    ?+  pax  %base
+      [%c %x case=@ desk=@ *]  desk.pax
+    ::
+        [%g %x case=@ dude=@ *]
+      =/  pre=path  /(scot %p our)/[dude.pax]/(scot %da now)/$
+      ?.  .^(? %gu pre)
+        %base
+      .^(desk %gd pre)
+    ==
+  %:  read-card
+      eyre-id
+      rpc-id
+      uri
+      |=(@da [[our desk da+now] page])
+      |=  =tang
+      %-  internal:error:rpc
+      :+  rpc-id
+        (of-wain:format (print-tang-to-wain tang))
+      %-  some
+      %-  pairs:enjs:format
+      :~  ['uri' s+uri]
+          ['mark' s+p.page]
+          ['desk' s+desk]
+      ==
   ==
 ::
 ++  simple-response
@@ -1302,43 +1359,25 @@
                 ==
               ::
                   %x
-                ?.  =(%json (rear scry-path))
-                  :_  this
-                  %+  send-event
-                    eyre-id
-                  %:  params:error:rpc
-                      p.u.id
-                      'Gall scry resource path must end in /json'
-                      `(frond:enjs:format %uri s+u.uri)
-                  ==
-                =/  scry-result
-                  %-  mule
-                  |.
-                    .^  *
-                        %gx
-                        %+  welp
-                          /(scot %p our.bowl)/[(head scry-path)]/(scot %da now.bowl)
-                        (slag 1 scry-path)
-                    ==
-                ?>  ?=([? p=*] scry-result)
-                ?.  -.scry-result
-                  :_  this
-                  (send-event eyre-id (internal:error:rpc p.u.id (crip (print-tang-to-wain (tang p.scry-result))) ~))
-                =/  scry-json=json  (json p.scry-result)
+                ::  a thread reads the scry and converts its mark to
+                ::  %mime with the marks in the agent's desk
                 :_  this
-                %:  send-event
+                :_  ~
+                %:  read-card
                     eyre-id
-                    %-  result:rpc
-                    :-  p.u.id
-                    %-  pairs:enjs:format
-                    :~  :-  'contents'
-                        :-  %a
-                        :~  %-  pairs:enjs:format
-                            :~  ['uri' s+u.uri]
-                                ['mimeType' s+'application/json']
-                                ['text' s+(en:json:html scry-json)]
-                            ==
-                        ==
+                    p.u.id
+                    u.uri
+                    |=  now=@da
+                    =/  prefix=path
+                      /(scot %p our.bowl)/[(head scry-path)]/(scot %da now)
+                    :-  [our.bowl .^(desk %gd (snoc prefix %$)) da+now]
+                    :-  (slav %tas (rear scry-path))
+                    .^(* %gx (welp prefix (slag 1 scry-path)))
+                    |=  =tang
+                    %:  internal:error:rpc
+                        p.u.id
+                        (of-wain:format (print-tang-to-wain tang))
+                        `(frond:enjs:format %uri s+u.uri)
                     ==
                 ==
               ==
@@ -1870,11 +1909,36 @@
                           ['text' s+text.result]
                       ==
                   ==
+                ::
+                    %resource-blob
+                  ::  XX parse annotations
+                  %-  pairs:enjs:format
+                  :~  ['type' s+'resource']
+                      :-  'resource'
+                      %-  pairs:enjs:format
+                      :~  ['uri' s+uri.result]
+                          ['mimeType' s+mime.result]
+                          ['blob' s+blob.result]
+                      ==
+                  ==
                 ==
               ==
           ==
         ==
       ==
+  ::
+      [%response %resource %mime eyre-id=@ta rpc-id=@ta ~]
+    ?+  sign-arvo
+      (on-arvo:def pole sign-arvo)
+    ::
+        [%khan %arow *]
+      :_  this
+      %+  send-event
+        eyre-id.pole
+      ?:  ?=(%.n -.p.sign-arvo)
+        (internal:error:rpc rpc-id.pole (of-wain:format (print-tang-to-wain tang.p.p.sign-arvo)) ~)
+      !<(json q.p.p.sign-arvo)
+    ==
   ::
       [%response %resource %beam eyre-id=@ta rpc-id=@ta uri=@t ~]
     ?+  sign-arvo
@@ -1882,33 +1946,9 @@
       ::
         [%clay %writ *]
       =/  [%clay %writ =riot:clay]  sign-arvo
+      =/  =beam  (need (parse:beam-uri byk.bowl uri.pole))
       :_  this
-      %:  send-event
-          eyre-id.pole
-          %-  result:rpc
-          :-  rpc-id.pole
-          %-  pairs:enjs:format
-          :~  :-  'contents'
-              :-  %a
-              :~  %-  pairs:enjs:format
-                  %+  welp
-                    :~  ['uri' s+uri.pole]
-                        :-  'text'
-                        :-  %s
-                        ?~  riot
-                          'Failed to fetch file.'
-                        %-  crip
-                        %-  print-tang-to-wain
-                        %-  pretty-file:pf
-                        !<(noun q.r.u.riot)
-                    ==
-                  ?~  riot
-                    ~
-                  :~  ['mimeType' s+(mark-mime p.r.u.riot)]
-                  ==
-              ==
-          ==
-      ==
+      (clay-read our.bowl now.bowl eyre-id.pole rpc-id.pole uri.pole q.beam riot)
     ==
   ::
       [%response %resource %scry %clay care=@tas eyre-id=@ta rpc-id=@ta uri=@t ~]
@@ -1917,15 +1957,15 @@
     ::
         [%clay %writ *]
       =/  [%clay %writ =riot:clay]  sign-arvo
+      ?:  =(%x care.pole)
+        ::  scry:// clay paths run /cx/desk/case/...
+        =/  =desk  (slav %tas (snag 1 (need (parse:scry-uri uri.pole))))
+        :_  this
+        (clay-read our.bowl now.bowl eyre-id.pole rpc-id.pole uri.pole desk riot)
       =/  result-text=@t
         ?~  riot
           'Failed to perform Clay scry.'
         ?+  care.pole  'Unsupported Clay scry care.'
-          %x
-            %-  crip
-            %-  print-tang-to-wain
-            %-  pretty-file:pf
-            !<(noun q.r.u.riot)
           %p
             =/  permissions=[read=dict:clay write=dict:clay]
               !<([read=dict:clay write=dict:clay] q.r.u.riot)
@@ -1981,12 +2021,6 @@
           %z
             (en:json:html [%s (scot %uv !<(@uvI q.r.u.riot))])
         ==
-      =/  result-mime=@t
-        ?:  =(%x care.pole)
-          ?~  riot
-            'text/plain'
-          (mark-mime p.r.u.riot)
-        'application/json'
       :_  this
       %:  send-event
           eyre-id.pole
@@ -1997,7 +2031,7 @@
               :-  %a
               :~  %-  pairs:enjs:format
                   :~  ['uri' s+uri.pole]
-                      ['mimeType' s+result-mime]
+                      ['mimeType' s+'application/json']
                       :-  'text'
                       :-  %s
                       result-text
@@ -2055,7 +2089,7 @@
       =/  =sage:mess:ames  sage.sign-arvo
       ?.  ?=(~ q.sage)
         :_  this
-        (send-event eyre-id.pole (fine-result our.bowl q.byk.bowl now.bowl rpc-id.pole uri.pole q.sage))
+        ~[(fine-read our.bowl now.bowl eyre-id.pole rpc-id.pole uri.pole p.sage q.sage)]
       ?-    task.pole
           %chum
         :_  this

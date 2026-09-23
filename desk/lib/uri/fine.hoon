@@ -24,7 +24,7 @@
         ~
       `(welp /c/x/[u.case-knot]/[desk] tail)
     ::  fine://~ship/g/x/revision/agent//1/path
-        [%g %x @t @t %$ %1 [@t *]]
+        [%g %x @t @t %$ %'1' [@t *]]
       =/  revision=@t  i.t.t.fine-path
       =/  agent=@t  i.t.t.t.fine-path
       =/  spur=path  t.t.t.t.t.t.fine-path
