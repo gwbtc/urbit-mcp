@@ -64,6 +64,12 @@
             text=@t
             annotations=(unit [audience=(list @t) priority=@rs modified=@t])
         ==
+        $:  %resource-blob
+            uri=@t
+            mime=@t
+            blob=@t
+            annotations=(unit [audience=(list @t) priority=@rs modified=@t])
+        ==
     ==
   ::
   ++  parameter
