@@ -474,6 +474,36 @@
       dojo=state:dj
   ==
 ::
+::  support aqua workflows, persist dojo sessions
+++  state-0-to-1
+  |=  old=state-0
+  ^-  state-1
+  :*  %1
+      tools.old
+      prompts.old
+      resources.old
+      templates.old
+      sse-sessions.old
+      *state:aq
+      *state:dj
+  ==
+::
+::  MCP 2025-11-25 to 2026-07-28
+::    remove .sse-sessions: sessionId deprecated by MCP 
+::    add .listeners: subscriptionId added by MCP
+++  state-1-to-2
+  |=  old=state-1
+  ^-  state-2
+  :*  %2
+      tools.old
+      prompts.old
+      resources.old
+      templates.old
+      ~
+      aqua.old
+      dojo.old
+  ==
+::
 ::  +dojo-drop: stop a held dojo session's
 ::  work, leave it, and kick its watchers
 ++  dojo-drop
@@ -699,34 +729,10 @@
         [[~ ~['.well-known']] dap.bowl]
     ==
   =/  migrated=state-2
-    ?-    -.old
-    ::
-    ::  MCP 2026-07-28
-        %2
-      old
-    ::
-    ::  MCP 2025-11-25; drop sse-sessions, unused in 2026-07-28
-        %1
-      :*  %2
-          tools.old
-          prompts.old
-          resources.old
-          templates.old
-          ~
-          aqua.old
-          dojo.old
-      ==
-    ::
-        %0
-      :*  %2
-          tools.old
-          prompts.old
-          resources.old
-          templates.old
-          ~
-          *state:aq
-          *state:dj
-      ==
+    ?-  -.old
+      %0  (state-1-to-2 (state-0-to-1 old))
+      %1  (state-1-to-2 old)
+      %2  old
     ==
   ::  a reload orphans the active run's thread; stop and close it
   =^  cleanup=(list card)  aqua.migrated
