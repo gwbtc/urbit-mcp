@@ -1,5 +1,4 @@
 |%
-+$  session  @t
 ::
 ++  tool
   =<  tool
