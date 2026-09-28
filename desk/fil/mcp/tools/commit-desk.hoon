@@ -102,14 +102,19 @@
             /(scot %p our.bo1)/[p.u.dek]/(scot %da now.bo1)
           spur
       ==
-    ;<  ~  bind:m
-      %-  send-raw-card:io
+    =/  watch-desk=card:agent:gall
       :*  %pass  /desk-update
           %arvo  %c
           %warp  [our.bo1 p.u.dek ~ %next %x da+now.bo1 /]
       ==
-    ;<  ~  bind:m
-      (send-raw-card:io [%pass /dill-logs %arvo %d %logs `~])
+    =/  unwatch-desk=card:agent:gall
+      [%pass /desk-update %arvo %c %warp our.bo1 p.u.dek ~]
+    =/  watch-logs=card:agent:gall
+      [%pass /dill-logs %arvo %d %logs `~]
+    =/  unwatch-logs=card:agent:gall
+      [%pass /dill-logs %arvo %d %logs ~]
+    ;<  ~  bind:m  (send-raw-card:io watch-desk)
+    ;<  ~  bind:m  (send-raw-card:io watch-logs)
     ;<  ~  bind:m
       (poke-our:io %hood %kiln-commit !>([(@tas p.u.dek) %.n]))
     ;<  maybe-dill-sign=(unit sign-arvo)  bind:m
@@ -127,14 +132,16 @@
           `[%skip ~]
         `[%done `sign-arvo.u.in.tin]
       ==
+    ::
+    ;<  ~  bind:m  (send-raw-card:io unwatch-logs)
     ?~  maybe-dill-sign
+      ;<  ~  bind:m  (send-raw-card:io unwatch-desk)
       (pure:m !>([%error %no-changes-to-commit ~]))
     ?>  ?=([%dill %logs *] u.maybe-dill-sign)
-    ;<  ~  bind:m
-      (send-raw-card:io [%pass /dill-logs %arvo %d %logs ~])
     =/  [%dill %logs =told:dill]  u.maybe-dill-sign
     ?-    told
         [%crud *]
+      ;<  ~  bind:m  (send-raw-card:io unwatch-desk)
       =/  error-lines=wain
         (print-tang-to-wain (prune-err q.told))
       %-  pure:m
@@ -152,6 +159,7 @@
       s+cord
     ::
         [%talk *]
+      ;<  ~  bind:m  (send-raw-card:io unwatch-desk)
       %-  pure:m
       !>  ^-  response:tool:mcp
       :-  %result

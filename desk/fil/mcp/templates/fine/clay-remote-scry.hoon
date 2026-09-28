@@ -7,7 +7,7 @@
     '''
     Read from a foreign ship's Clay remote scry namespace.
     '''
-    `'application/octet-stream'
+    ~
     ~
     `[~['agent'] ~ ~]
 ==

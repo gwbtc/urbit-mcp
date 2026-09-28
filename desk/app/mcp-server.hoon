@@ -1,7 +1,18 @@
-/-  mcp
-/+  dbug, verb, server, default-agent, pf=pretty-file,
+/-  mcp, sole, spider
+/+  dbug, verb, server, default-agent, pf=pretty-file, io=strandio,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
-    scry-uri=uri-scry
+    scry-uri=uri-scry, aq=mcp-aqua, dj=mcp-dojo, ma=mcp-arguments,
+    mm=mcp-mime
+::
+::  default features are imported with /~
+::  to force rebuilds when they're added or changed
+/~  fil-tools     tool:mcp               /fil/mcp/tools
+/~  fil-prompts   prompt:mcp             /fil/mcp/prompts
+/~  fil-res-beam  resource:mcp           /fil/mcp/resources/beam
+/~  fil-res-scry  resource:mcp           /fil/mcp/resources/scry
+/~  fil-res-docs  resource:mcp           /fil/mcp/resources/urbit-docs
+/~  fil-tpl-scry  template:resource:mcp  /fil/mcp/templates/scry
+/~  fil-tpl-fine  template:resource:mcp  /fil/mcp/templates/fine
 ::
 /$  tools-to-json      %mcp-tools      %json
 /$  prompts-to-json    %mcp-prompts    %json
@@ -9,6 +20,24 @@
 /$  templates-to-json  %mcp-templates  %json
 ::
 |%
+::
+::  replace .old entries with .new entries that share .key
+++  merge-features
+  |*  [new=(list) old=(set) key=$-(* *)]
+  ^+  old
+  ::  Empty old must exit before the skip gate below is built: its
+  ::  sample type is _(head ~(tap in old)), and a $_ bunt EVALUATES
+  ::  the expression — head of an empty tap crashes. Every fresh
+  ::  install has empty sets, so on-init died in gall while upgrades
+  ::  (non-empty state via on-load) sailed through. That asymmetry is
+  ::  why this bug survived on long-lived ships.
+  ?:  =(~ old)  (silt new)
+  =/  keys  (silt (turn new key))
+  %-  silt
+  %+  weld  new
+  %+  skip  ~(tap in old)
+  |=(o=_(head ~(tap in old)) (~(has in keys) (key o)))
+::
 ++  mcp-protocol-version  %'2026-07-28'
 ::
 ++  supported-versions  ~['2026-07-28' '2025-11-25']
@@ -17,7 +46,8 @@
 ++  cache-ttl-lists     300.000
 ++  cache-ttl-discover  3.600.000
 ::
-++  wire-id
+::  the raw json-rpc id travels on wires as a jammed @uw
+++  cue-wire-id
   |=  t=@ta
   ^-  json
   ;;(json (cue (slav %uw t)))
@@ -102,55 +132,125 @@
     (loopback-authority (slag 8 origin-tape))
   %.n
 ::
-++  page-to-mime
-  |=  [our=@p desk=@tas now=@da =page]
-  ^-  mime
-  ?:  =(%mime p.page)
-    ;;(mime q.page)
-  =/  =dais:clay
-    .^(dais:clay %cb /(scot %p our)/[desk]/(scot %da now)/[p.page])
-  =/  vax=vase  (vale:dais q.page)
-  =/  =tube:clay
-    .^(tube:clay %cc /(scot %p our)/[desk]/(scot %da now)/[p.page]/mime)
-  !<(mime (tube vax))
 ::
-++  fine-result
-  |=  [our=@p desk=@tas now=@da rpc-id=json uri=@t =page]
-  ^-  json
-  =/  mime-result
-    %-  mule
-    |.
-    (page-to-mime our desk now page)
-  ?-  -.mime-result
-  ::
-      %|
-    %-  internal:error:rpc
-    :+  rpc-id
-        (crip "Could not convert fine resource mark %{<p.page>} to %mime; ensure this desk has /mar/%{<p.page>}/hoon with +mime:grow arm")
-    %-  some
-    %-  pairs:enjs:format
-    :~  ['uri' s+uri]
-        ['mark' s+(crip (trip p.page))]
-    ==
-  ::
-      %&
-  =/  =mime  p.mime-result
-  %-  wrap-result
-  :^  our  rpc-id
-    %-  pairs:enjs:format
-    :~  :-  'contents'
+::  +local-desk: .desk if this ship has it, else %base
+++  local-desk
+  |=  [our=@p now=@da =desk]
+  ^-  ^desk
+  ?:  (~(has in .^((set ^desk) %cd /(scot %p our)//(scot %da now))) desk)
+    desk
+  %base
+::
+::  +read-card: answer resources/read with the page .get reads at .uri
+::  and the thread's time, converted to %mime with the marks in the
+::  beak .get names, or with .fail's json. both run on a thread, where
+::  a failed scry in .get fails the thread instead of the agent's event
+++  read-card
+  |=  [our=@p eyre-id=@ta rpc-id=json uri=@t get=$-(@da [beak page]) fail=$-(tang json)]
+  ^-  card
+  :*  %pass  /response/resource/mime/[eyre-id]/(scot %uw (jam rpc-id))
+      %arvo  %k  %lard  %base
+      =/  m  (strand:spider ,vase)
+      ^-  form:m
+      ;<  now=@da  bind:m  get-time:io
+      =/  [=beak =page]  (get now)
+      ;<  res=(each mime tang)  bind:m  (page-to-mime:mm beak page)
+      %-  pure:m
+      !>  ^-  json
+      ?-  -.res
+        %|  (fail p.res)
+      ::
+          %&
+        %:  wrap-result
+            our
+            rpc-id
+            (frond:enjs:format 'contents' a+~[(contents:mm uri p.res)])
+            `0
+        ==
+      ==
+  ==
+::
+::  +clay-read: answer resources/read with a clay read of .uri,
+::  converted with the marks in .desk or else pretty-printed
+++  clay-read
+  |=  [our=@p now=@da eyre-id=@ta rpc-id=json uri=@t =desk =riot:clay]
+  ^-  (list card)
+  ?~  riot
+    %+  send-event
+      eyre-id
+    %:  wrap-result
+        our
+        rpc-id
+        %+  frond:enjs:format
+          'contents'
         :-  %a
         :~  %-  pairs:enjs:format
             :~  ['uri' s+uri]
-                ['mimeType' s+(rsh 3^1 (spat p.mime))]
-                :-  'blob'
-                :-  %s
-                %-  en:base64:mimes:html
-                q.mime
+                ['mimeType' s+'text/plain']
+                ['text' s+'Failed to fetch file.']
             ==
         ==
+        `0
     ==
-  `0
+  :_  ~
+  %:  read-card
+      our
+      eyre-id
+      rpc-id
+      uri
+      |=(@da [[our (local-desk our now desk) da+now] p.r.u.riot q.q.r.u.riot])
+      |=  tang
+      %:  wrap-result
+          our
+          rpc-id
+          %+  frond:enjs:format
+            'contents'
+          :-  %a
+          :~  %-  pairs:enjs:format
+              :~  ['uri' s+uri]
+                  ['mimeType' s+(mark-mime p.r.u.riot)]
+                  :-  'text'
+                  s+(of-wain:format (print-tang-to-wain (pretty-file:pf !<(noun q.r.u.riot))))
+              ==
+          ==
+          `0
+      ==
+  ==
+::
+::  +fine-read: answer resources/read with a remote scry result,
+::  converted with the marks of the matching local desk (or the local
+::  agent's desk), else %base
+++  fine-read
+  |=  [our=@p now=@da eyre-id=@ta rpc-id=json uri=@t =spar:ames =page]
+  ^-  card
+  =/  pax=(pole knot)  path.spar
+  =/  =desk
+    %^  local-desk  our  now
+    ?+  pax  %base
+      [%c %x case=@ desk=@ *]  desk.pax
+    ::
+        [%g %x case=@ dude=@ *]
+      =/  pre=path  /(scot %p our)/[dude.pax]/(scot %da now)/$
+      ?.  .^(? %gu pre)
+        %base
+      .^(desk %gd pre)
+    ==
+  %:  read-card
+      our
+      eyre-id
+      rpc-id
+      uri
+      |=(@da [[our desk da+now] page])
+      |=  =tang
+      %-  internal:error:rpc
+      :+  rpc-id
+        (of-wain:format (print-tang-to-wain tang))
+      %-  some
+      %-  pairs:enjs:format
+      :~  ['uri' s+uri]
+          ['mark' s+p.page]
+          ['desk' s+desk]
+      ==
   ==
 ::
 ++  simple-response
@@ -302,9 +402,48 @@
       prompts=?
       resources=?
   ==
+::
+++  install-defaults
+  |=  $:  old=state-2
+          tools=(list tool:mcp)
+          prompts=(list prompt:mcp)
+          resources=(list resource:mcp)
+          templates=(list template:resource:mcp)
+      ==
+  ^-  state-2
+  %=  old
+    tools      (merge-features tools tools.old |=(t=tool:mcp name.t))
+    prompts    (merge-features prompts prompts.old |=(p=prompt:mcp name.p))
+    resources  (merge-features resources resources.old |=(r=resource:mcp uri.r))
+    templates  (merge-features templates templates.old |=(t=template:resource:mcp name.t))
+  ==
+::
+::  +load-changed-cards: per-class list_changed notifications for the
+::  classes whose feature set differs between .old and .new
+::
+++  load-changed-cards
+  |=  [=bowl:gall old=state-2 new=state-2]
+  ^-  (list card)
+  %-  zing
+  ^-  (list (list card))
+  :~  ?:  =(tools.old tools.new)
+        ~
+      (broadcast-list-changed bowl listeners.old %tools)
+    ::
+      ?:  =(prompts.old prompts.new)
+        ~
+      (broadcast-list-changed bowl listeners.old %prompts)
+    ::
+      ?:  ?&  =(resources.old resources.new)
+              =(templates.old templates.new)
+          ==
+        ~
+      (broadcast-list-changed bowl listeners.old %resources)
+  ==
 +$  versioned-state
   $%  state-0
       state-1
+      state-2
   ==
 +$  state-0
   $:  %0
@@ -320,19 +459,209 @@
       prompts=(set prompt:mcp)
       resources=(set resource:mcp)
       templates=(set template:resource:mcp)
-      listeners=(map @ta listener)
+      sse-sessions=(map @ta @t)
+      aqua=state:aq
+      dojo=state:dj
   ==
++$  state-2
+  $:  %2
+      tools=(set tool:mcp)
+      prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
+      templates=(set template:resource:mcp)
+      listeners=(map @ta listener)
+      aqua=state:aq
+      dojo=state:dj
+  ==
+::
+::  +dojo-drop: stop a held dojo session's
+::  work, leave it, and kick its watchers
+++  dojo-drop
+  |=  [our=@p ses=@ta]
+  ^-  (list card)
+  :~  :*  %pass  /dojo/[ses]  %agent  [our %dojo]  %poke  %sole-action
+          !>(`sole-action:sole`[[our (dojo-ses:dj ses)] %clr ~])
+      ==
+      [%pass /dojo/[ses] %agent [our %dojo] %leave ~]
+      [%give %kick ~[/dojo/[ses]] ~]
+  ==
+::
+::  +aqua-cleanup: stop and unsubscribe from one managed run;
+::  the shared %aqua agent and its virtual ships stay up
+++  aqua-cleanup
+  |=  [our=@p id=@ta tid=@ta stop=?]
+  ^-  (list card)
+  %+  weld
+    ^-  (list card)
+    ?:  stop
+      ~[[%pass /aqua/[id]/stop %agent [our %spider] %poke %spider-stop !>([tid |])]]
+    ~
+  ^-  (list card)
+  :~  [%pass /aqua/[id]/result %agent [our %spider] %leave ~]
+      [%pass /aqua/[id]/effects %agent [our %aqua] %leave ~]
+  ==
+::
+::  +aqua-drain: mark a run %finishing and wake one tick from now
+++  aqua-drain
+  |=  [=bowl:gall aqua=state:aq id=@ta result=status:aq error=(unit @t)]
+  ^-  (quip card state:aq)
+  =/  r=run:aq
+    (begin-finish:aq (~(got by runs.aqua) id) now.bowl error)
+  :_  aqua(runs (~(put by runs.aqua) id r))
+  ::  one logical tick in the future forces a new host kernel event.
+  ::  poke acks can overtake pending facts in the current event's
+  ::  worklist; an external behn wake cannot. no guest events or
+  ::  quiet-period timer.
+  :~  :*  %pass  /aqua-drain/[id]/(drain-branch:aq result)
+          %arvo  %b  %wait  +(now.bowl)
+      ==
+  ==
+::
+::  +aqua-finish: record a run's final status and clean up after it
+++  aqua-finish
+  |=  $:  =bowl:gall
+          aqua=state:aq
+          id=@ta
+          result=status:aq
+          error=(unit @t)
+          stop=?
+      ==
+  ^-  (quip card state:aq)
+  :-  (aqua-cleanup our.bowl id tid:(~(got by runs.aqua) id) stop)
+  (complete:aq aqua id now.bowl result error)
 --
+::
 %-  agent:dbug
 ^-  agent:gall
-=|  state-1
+=|  state-2
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
-+*  this   .
-    def    ~(. (default-agent this %|) bowl)
++*  this               .
+    def                ~(. (default-agent this %|) bowl)
+    default-tools      ~(val by fil-tools)
+    default-prompts    ~(val by fil-prompts)
+    default-templates  (weld ~(val by fil-tpl-scry) ~(val by fil-tpl-fine))
+    default-resources  :(weld ~(val by fil-res-beam) ~(val by fil-res-scry) ~(val by fil-res-docs))
 ::
-++  on-agent  on-agent:def
+++  on-agent
+  |=  [=(pole knot) =sign:agent:gall]
+  ^-  (quip card _this)
+  ?+    pole  (on-agent:def `wire`pole sign)
+  ::
+  ::  relay a held dojo session to the threads watching it
+      [%dojo ses=@ta ~]
+    ?-    -.sign
+        %fact
+      ?.  =(%sole-effect p.cage.sign)
+        `this
+      =/  got=(unit session:dj)  (~(get by dojo) ses.pole)
+      ?~  got
+        `this
+      =/  new=(unit session:dj)
+        (observe:dj u.got !<(sole-effect:sole q.cage.sign))
+      ::  our clock has lost step with dojo's and cannot recover
+      ?~  new
+        %-  (slog leaf+"mcp: dojo session {(trip ses.pole)} lost sync; dropped" ~)
+        :-  (dojo-drop our.bowl ses.pole)
+        this(dojo (~(del by dojo) ses.pole))
+      :-  [%give %fact ~[/dojo/[ses.pole]] cage.sign]~
+      this(dojo (~(put by dojo) ses.pole u.new))
+    ::
+    ::  a rejected edit means our clock is wrong for good
+        %poke-ack
+      ?:  |(?=(~ p.sign) !(~(has by dojo) ses.pole))
+        `this
+      :-  (dojo-drop our.bowl ses.pole)
+      this(dojo (~(del by dojo) ses.pole))
+    ::
+        %watch-ack
+      ?~  p.sign
+        `this
+      :-  [%give %kick ~[/dojo/[ses.pole]] ~]~
+      this(dojo (~(del by dojo) ses.pole))
+    ::
+        %kick
+      :-  [%give %kick ~[/dojo/[ses.pole]] ~]~
+      this(dojo (~(del by dojo) ses.pole))
+    ==
+  ::
+      [%aqua id=@ta branch=@ta ~]
+    =/  got=(unit run:aq)  (~(get by runs.aqua) id.pole)
+    ?~  got
+      `this
+    =/  r=run:aq  u.got
+    ?:  (terminal:aq status.r)
+      `this
+    =^  cards  aqua
+      ^-  (quip card state:aq)
+      ?-    -.sign
+          %watch-ack
+        ?^  p.sign
+          (aqua-finish bowl aqua id.pole %failed `'subscription rejected' &)
+        ?.  =(%result branch.pole)
+          `aqua
+        ?:  ?=(?(%cancelling %finishing) status.r)
+          `aqua
+        =.  r  r(status %running, updated now.bowl)
+        `aqua(runs (~(put by runs.aqua) id.pole r))
+      ::
+          %poke-ack
+        ?~  p.sign
+          `aqua
+        (aqua-finish bowl aqua id.pole %failed `'Spider rejected operation' &)
+      ::
+          %kick
+        ?:  &(=(%result branch.pole) =(%finishing status.r))
+          `aqua
+        ?:  =(%cancelling status.r)
+          (aqua-finish bowl aqua id.pole %cancelled ~ |)
+        %:  aqua-finish
+            bowl
+            aqua
+            id.pole
+            %failed
+            `'subscription closed unexpectedly'
+            &
+        ==
+      ::
+          %fact
+        ?:  =(%effects branch.pole)
+          ?.  =(%aqua-effect p.cage.sign)
+            `aqua
+          ::  decode the envelope first; runtime-specific tags are opaque
+          =.  r  (observe:aq r now.bowl +.q.cage.sign)
+          `aqua(runs (~(put by runs.aqua) id.pole r))
+        ?.  =(%result branch.pole)
+          `aqua
+        ?:  =(%finishing status.r)
+          `aqua
+        ?+    p.cage.sign  `aqua
+            %thread-done
+          %:  aqua-drain
+              bowl
+              aqua
+              id.pole
+              ?:(=(%cancelling status.r) %cancelled %completed)
+              ~
+          ==
+        ::
+            %thread-fail
+          ?:  =(%cancelling status.r)
+            (aqua-drain bowl aqua id.pole %cancelled ~)
+          =+  !<([term=@tas =tang] q.cage.sign)
+          ::  never render a potentially enormous error tang here
+          %:  aqua-drain
+              bowl
+              aqua
+              id.pole
+              %failed
+              `(crip "Spider failure: %{(trip (end [3 128] term))}; tang omitted for brevity")
+          ==
+        ==
+      ==
+    [cards this]
+  ==
 ::
 ++  on-leave
   |=  =path
@@ -350,6 +679,15 @@
   |=  =vase
   ^-  (quip card _this)
   =/  old  !<(versioned-state vase)
+  ::  Rebind /mcp on every load, not just on-init. An upgrade or a
+  ::  nuke+revive runs on-load only, and without this card the main
+  ::  endpoint 404s while /oauth and /.well-known keep working — the
+  ::  agent looks healthy in +vats and serves nothing.
+  =/  mcp-card=card
+    :*  %pass  /eyre/connect
+        %arvo  %e  %connect
+        [`/mcp dap.bowl]
+    ==
   =/  oauth-card=card
     :*  %pass  /eyre/connect/oauth
         %arvo  %e  %connect
@@ -360,29 +698,76 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
-  ?-    -.old
-  ::
-  ::  MCP 2026-07-28
-      %1
-    :_  this(state old)
-    :~  oauth-card
+  =/  migrated=state-2
+    ?-    -.old
+    ::
+    ::  MCP 2026-07-28
+        %2
+      old
+    ::
+    ::  MCP 2025-11-25; drop sse-sessions, unused in 2026-07-28
+        %1
+      :*  %2
+          tools.old
+          prompts.old
+          resources.old
+          templates.old
+          ~
+          aqua.old
+          dojo.old
+      ==
+    ::
+        %0
+      :*  %2
+          tools.old
+          prompts.old
+          resources.old
+          templates.old
+          ~
+          *state:aq
+          *state:dj
+      ==
+    ==
+  ::  a reload orphans the active run's thread; stop and close it
+  =^  cleanup=(list card)  aqua.migrated
+    ?~  active.aqua.migrated
+      `aqua.migrated
+    %:  aqua-finish
+        bowl
+        aqua.migrated
+        u.active.aqua.migrated
+        %interrupted
+        `'agent reloaded; managed thread stopped'
+        &
+    ==
+  =/  new=state-2
+    %:  install-defaults
+        migrated
+        default-tools
+        default-prompts
+        default-resources
+        default-templates
+    ==
+  :_  this(state new)
+  %+  weld
+    ^-  (list card)
+    :~  mcp-card
+        oauth-card
         well-known-card
     ==
-  ::
-  ::  MCP 2025-11-25
-      %0
-    ::  drop sse-sessions, unused in 2026-07-28
-    :-  :~  oauth-card
-            well-known-card
-        ==
-    %=  this
-      state  [%1 tools.old prompts.old resources.old templates.old ~]
-    ==
-  ==
+  (weld cleanup (load-changed-cards bowl migrated new))
 ::
 ++  on-init
   ^-  (quip card _this)
-  :_  this
+  :_  %=  this
+        state  %-  install-defaults
+               :*  state
+                   default-tools
+                   default-prompts
+                   default-resources
+                   default-templates
+               ==
+      ==
   :~  :*  %pass  /eyre/connect
           %arvo  %e  %connect
           [`/mcp dap.bowl]
@@ -406,31 +791,84 @@
           %arvo  %e  %connect
           [[~ ~['oauth']] dap.bowl]
       ==
-      :*  %pass  ~
-          %arvo  %k
-          %fard  q.byk.bowl
-          %install-features
-          :-  %noun
-          !>  ^-  (list beam)
-          %+  turn
-            .^  (list path)
-                %ct
-                /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)/fil/mcp
-            ==
-          |=  pax=path
-          ^-  beam
-          %-  need
-          %-  de-beam
-          %+  welp
-            /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)
-          pax
-  ==  ==
+  ==
 ::
 ++  on-poke
   |=  [=mark =vase]
   ^-  (quip card _this)
   |^  ?+  mark
         (on-poke:def mark vase)
+          ::  dojo/* tool threads send lines to, and close,
+          ::  the dojo sessions this agent holds
+          %mcp-dojo
+        ?>  =(src our):bowl
+        =/  act=action:dj  !<(action:dj vase)
+        ?-    -.act
+            %close
+          :-  (dojo-drop our.bowl ses.act)
+          this(dojo (~(del by dojo) ses.act))
+        ::
+            %clear
+          ?>  (~(has by dojo) ses.act)
+          :_  this
+          :~  :*  %pass  /dojo/[ses.act]  %agent  [our.bowl %dojo]  %poke
+                  %sole-action
+                  !>(`sole-action:sole`[[our.bowl (dojo-ses:dj ses.act)] %clr ~])
+              ==
+          ==
+        ::
+            %input
+          =/  old=session:dj  (~(got by dojo) ses.act)
+          ?>  ready.old
+          =^  cal=sole-change:sole  old  (input:dj old now.bowl txt.act)
+          =/  id=sole-id:sole  [our.bowl (dojo-ses:dj ses.act)]
+          :_  this(dojo (~(put by dojo) ses.act old))
+          :~  :*  %pass  /dojo/[ses.act]  %agent  [our.bowl %dojo]
+                  %poke  %sole-action  !>(`sole-action:sole`[id %det cal])
+              ==
+              :*  %pass  /dojo/[ses.act]  %agent  [our.bowl %dojo]
+                  %poke  %sole-action  !>(`sole-action:sole`[id %ret ~])
+              ==
+          ==
+        ==
+      ::
+          ::  the aqua/* tool threads return at once, so this agent
+          ::  holds each run's subscriptions and captured effects
+          %mcp-aqua
+        ?>  =(src our):bowl
+        =/  act=action:aq  !<(action:aq vase)
+        ?-    -.act
+            %start
+          ?>  ?=(~ active.aqua)
+          ?>  !(~(has by runs.aqua) id.act)
+          ?>  &((lte (met 3 id.act) 128) (lte (met 3 desk.act) 128) (lte (met 3 term.act) 128))
+          ?>  (lte (lent effects.act) 16)
+          ?>  (levy effects.act |=(e=@tas (matches-effect:aq supported-effects:aq e)))
+          =/  kept=state:aq  (retain:aq aqua)
+          =/  tid=@ta  (cat 3 'mcp-aqua-' id.act)
+          =/  r=run:aq
+            [id.act tid desk.act term.act %starting now.bowl now.bowl 0 0 0 ~ ~ effects.act 0 ~]
+          :_  this(aqua kept(runs (~(put by runs.kept) id.act r), active `id.act))
+          :~  [%pass /aqua/[id.act]/effects %agent [our.bowl %aqua] %watch /effect]
+              [%pass /aqua/[id.act]/result %agent [our.bowl %spider] %watch /thread-result/[tid]]
+              :*  %pass  /aqua/[id.act]/start  %agent  [our.bowl %spider]  %poke
+                  %spider-start  !>([~ `tid [our.bowl desk.act da+now.bowl] term.act arg.act])
+              ==
+          ==
+        ::
+            %cancel
+          =/  r=run:aq  (~(got by runs.aqua) id.act)
+          ?:  |((terminal:aq status.r) ?=(?(%cancelling %finishing) status.r))  `this
+          =/  pending=run:aq  r
+          =.  pending  pending(status %cancelling, updated now.bowl)
+          :_  this(aqua aqua(runs (~(put by runs.aqua) id.act pending)))
+          ~[[%pass /aqua/[id.act]/stop %agent [our.bowl %spider] %poke %spider-stop !>([tid.r |])]]
+        ::
+            %release
+          =/  r=run:aq  (~(got by runs.aqua) id.act)
+          ?>  (terminal:aq status.r)
+          `this(aqua aqua(runs (~(del by runs.aqua) id.act)))
+        ==
       ::
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
@@ -545,7 +983,20 @@
             %add-resource  %resources
             %add-template  %resources
           ==
-        :-  (broadcast-list-changed bowl listeners kind)
+        ::  An add that leaves the feature set as it was (for instance
+        ::  the install-features thread re-importing an unchanged file
+        ::  on load) is not a list change; skip the broadcast for it.
+        ::
+        =/  changed=?
+          ?-  mark
+            %add-tool      !(~(has in tools) !<(tool:mcp vase))
+            %add-prompt    !(~(has in prompts) !<(prompt:mcp vase))
+            %add-resource  !(~(has in resources) !<(resource:mcp vase))
+            %add-template  !(~(has in templates) !<(template:resource:mcp vase))
+          ==
+        :-  ?.  changed
+              ~
+            (broadcast-list-changed bowl listeners kind)
         ?-  mark
           %add-tool
             =/  new=tool:mcp  !<(tool:mcp vase)
@@ -732,6 +1183,7 @@
         =/  id=(unit json)      (~(get jo:jut jon) /id)
         ?~  id
           ::  a request with no id is an MCP 2025-11-25 notification
+          :_  this
           (json-response eyre-id 400 (request:error:rpc ~ 'Missing JSON RPC request ID' ~))
         ?.  ?=(?([%n *] [%s *]) u.id)
           :_  this
@@ -1123,45 +1575,27 @@
                 ==
               ::
                   %x
-                ?.  =(%json (rear scry-path))
-                  :_  this
-                  %+  send-event
-                    eyre-id
-                  %:  params:error:rpc
-                      u.id
-                      'Gall scry resource path must end in /json'
-                      `(frond:enjs:format %uri s+u.uri)
-                  ==
-                =/  scry-result
-                  %-  mule
-                  |.
-                    .^  *
-                        %gx
-                        %+  welp
-                          /(scot %p our.bowl)/[(head scry-path)]/(scot %da now.bowl)
-                        (slag 1 scry-path)
-                    ==
-                ?>  ?=([? p=*] scry-result)
-                ?.  -.scry-result
-                  :_  this
-                  (send-event eyre-id (internal:error:rpc u.id (crip (print-tang-to-wain (tang p.scry-result))) ~))
-                =/  scry-json=json  (json p.scry-result)
+                ::  a thread reads the scry and converts its mark to
+                ::  %mime with the marks in the agent's desk
                 :_  this
-                %:  send-event
+                :_  ~
+                %:  read-card
+                    our.bowl
                     eyre-id
-                    %-  wrap-result
-                    :^  our.bowl  u.id
-                      %-  pairs:enjs:format
-                      :~  :-  'contents'
-                          :-  %a
-                          :~  %-  pairs:enjs:format
-                              :~  ['uri' s+u.uri]
-                                  ['mimeType' s+'application/json']
-                                  ['text' s+(en:json:html scry-json)]
-                              ==
-                          ==
-                      ==
-                    `0
+                    u.id
+                    u.uri
+                    |=  now=@da
+                    =/  prefix=path
+                      /(scot %p our.bowl)/[(head scry-path)]/(scot %da now)
+                    :-  [our.bowl .^(desk %gd (snoc prefix %$)) da+now]
+                    :-  (slav %tas (rear scry-path))
+                    .^(* %gx (welp prefix (slag 1 scry-path)))
+                    |=  =tang
+                    %:  internal:error:rpc
+                        u.id
+                        (of-wain:format (print-tang-to-wain tang))
+                        `(frond:enjs:format %uri s+u.uri)
+                    ==
                 ==
               ==
             ::
@@ -1417,29 +1851,10 @@
             ~
           ?~  args-map
             (send-event eyre-id (params:error:rpc u.id 'Invalid arguments' ~))
-          =>  |%
-              ++  parse-arg
-                |=  jon=json
-                ^-  argument:tool:mcp
-                ?+  jon
-                  ~
-                ::
-                    [%a *]
-                  [%array (turn p.jon parse-arg)]
-                ::
-                    [%b ?]
-                  [%boolean p.jon]
-                ::
-                    [%o *]
-                  [%object (~(run by p.jon) parse-arg)]
-                ::
-                    [%n @ta]
-                  [%number (slav %ud p.jon)]
-                ::
-                    [%s @t]
-                  [%string p.jon]
-                ==
-              --
+          =/  parsed=(unit (map @t argument:tool:mcp))
+            (parse-args:ma u.args-map)
+          ?~  parsed
+            (send-event eyre-id (params:error:rpc u.id 'Invalid tool arguments: numbers must be unsigned decimal integers' ~))
           ^-  (list card)
           ::  When the client accepts SSE (the MCP streamable-HTTP spec
           ::  says it must for POST), answer with an SSE stream and ping
@@ -1453,7 +1868,7 @@
                 %arvo  %k
                 %lard  q.byk.bowl
                 %-  thread-builder.i.tool-results
-                (~(run by u.args-map) parse-arg)
+                u.parsed
             ==
           ?.  sse
             ~[run-tool]
@@ -1468,6 +1883,20 @@
   |=  =(pole knot)
   ^-  (unit (unit cage))
   ?+  pole  (on-peek:def `path`pole)
+    ::
+    ::  .^((unit ?) %gx /=mcp-server=/dojo/[ses]/noun)
+    ::  ~ if no such session is held, else whether it will take a line
+      [%x %dojo ses=@ta ~]
+    :^  ~  ~  %noun
+    !>  ^-  (unit ?)
+    (bind (~(get by dojo) ses.pole) |=(s=session:dj ready.s))
+    ::
+      [%x %aqua %read encoded=@ta ~]
+    ::  Tool encodes a small query in the scry path; no query state needed.
+    ?>  (lte (met 3 encoded.pole) 4.096)
+    =/  q=query:aq  ;;(query:aq (cue (slav %uv encoded.pole)))
+    ?>  &((lte (lent ships.q) 32) (lte (lent effects.q) 16) (lte (met 3 id.q) 128))
+    ``json+!>((read-json:aq aqua q))
     ::
     ::  .^(json %gx /=mcp-server=/mcp/tools/json)
     ::  .^((list tool:mcp) %gx /=mcp-server=/mcp/tools/noun)
@@ -1515,6 +1944,23 @@
   ^-  (quip card _this)
   ?+  pole
     `this
+  ::
+      [%aqua-drain id=@ta branch=@tas ~]
+    ?>  ?=([%behn %wake *] sign-arvo)
+    =/  wake-error=(unit tang)  +>.sign-arvo
+    =/  got=(unit run:aq)  (~(get by runs.aqua) id.pole)
+    ?~  got
+      `this
+    ?.  =(%finishing status.u.got)
+      `this
+    =/  result=(unit status:aq)  (drain-result:aq branch.pole)
+    ?~  result
+      `this
+    =^  cards  aqua
+      ?~  wake-error
+        (aqua-finish bowl aqua id.pole u.result error.u.got |)
+      (aqua-finish bowl aqua id.pole %failed `'completion wake failed' &)
+    [cards this]
   ::
       [%keepalive eyre-id=@ta ~]
     ?>  ?=([%behn %wake *] sign-arvo)
@@ -1675,11 +2121,36 @@
                           ['text' s+text.result]
                       ==
                   ==
+                ::
+                    %resource-blob
+                  ::  XX parse annotations
+                  %-  pairs:enjs:format
+                  :~  ['type' s+'resource']
+                      :-  'resource'
+                      %-  pairs:enjs:format
+                      :~  ['uri' s+uri.result]
+                          ['mimeType' s+mime.result]
+                          ['blob' s+blob.result]
+                      ==
+                  ==
                 ==
               ==
           ~
         ==
       ==
+  ::
+      [%response %resource %mime eyre-id=@ta rpc-id=@ta ~]
+    ?+  sign-arvo
+      (on-arvo:def pole sign-arvo)
+    ::
+        [%khan %arow *]
+      :_  this
+      %+  send-event
+        eyre-id.pole
+      ?:  ?=(%.n -.p.sign-arvo)
+        (internal:error:rpc (cue-wire-id rpc-id.pole) (of-wain:format (print-tang-to-wain tang.p.p.sign-arvo)) ~)
+      !<(json q.p.p.sign-arvo)
+    ==
   ::
       [%response %resource %beam eyre-id=@ta rpc-id=@ta uri=@t ~]
     ?+  sign-arvo
@@ -1687,34 +2158,9 @@
       ::
         [%clay %writ *]
       =/  [%clay %writ =riot:clay]  sign-arvo
+      =/  =beam  (need (parse:beam-uri byk.bowl uri.pole))
       :_  this
-      %:  send-event
-          eyre-id.pole
-          %-  wrap-result
-          :^  our.bowl  (cue-wire-id rpc-id.pole)
-            %-  pairs:enjs:format
-            :~  :-  'contents'
-                :-  %a
-                :~  %-  pairs:enjs:format
-                    %+  welp
-                      :~  ['uri' s+uri.pole]
-                          :-  'text'
-                          :-  %s
-                          ?~  riot
-                            'Failed to fetch file.'
-                          %-  crip
-                          %-  print-tang-to-wain
-                          %-  pretty-file:pf
-                          !<(noun q.r.u.riot)
-                      ==
-                    ?~  riot
-                      ~
-                    :~  ['mimeType' s+(mark-mime p.r.u.riot)]
-                    ==
-                ==
-            ==
-          `0
-      ==
+      (clay-read our.bowl now.bowl eyre-id.pole (cue-wire-id rpc-id.pole) uri.pole q.beam riot)
     ==
   ::
       [%response %resource %scry %clay care=@tas eyre-id=@ta rpc-id=@ta uri=@t ~]
@@ -1723,15 +2169,15 @@
     ::
         [%clay %writ *]
       =/  [%clay %writ =riot:clay]  sign-arvo
+      ?:  =(%x care.pole)
+        ::  scry:// clay paths run /cx/desk/case/...
+        =/  =desk  (slav %tas (snag 1 (need (parse:scry-uri uri.pole))))
+        :_  this
+        (clay-read our.bowl now.bowl eyre-id.pole (cue-wire-id rpc-id.pole) uri.pole desk riot)
       =/  result-text=@t
         ?~  riot
           'Failed to perform Clay scry.'
         ?+  care.pole  'Unsupported Clay scry care.'
-          %x
-            %-  crip
-            %-  print-tang-to-wain
-            %-  pretty-file:pf
-            !<(noun q.r.u.riot)
           %p
             =/  permissions=[read=dict:clay write=dict:clay]
               !<([read=dict:clay write=dict:clay] q.r.u.riot)
@@ -1787,12 +2233,6 @@
           %z
             (en:json:html [%s (scot %uv !<(@uvI q.r.u.riot))])
         ==
-      =/  result-mime=@t
-        ?:  =(%x care.pole)
-          ?~  riot
-            'text/plain'
-          (mark-mime p.r.u.riot)
-        'application/json'
       :_  this
       %:  send-event
           eyre-id.pole
@@ -1803,7 +2243,7 @@
                 :-  %a
                 :~  %-  pairs:enjs:format
                     :~  ['uri' s+uri.pole]
-                        ['mimeType' s+result-mime]
+                        ['mimeType' s+'application/json']
                         :-  'text'
                         :-  %s
                         result-text
@@ -1863,7 +2303,7 @@
       =/  =sage:mess:ames  sage.sign-arvo
       ?.  ?=(~ q.sage)
         :_  this
-        (send-event eyre-id.pole (fine-result our.bowl q.byk.bowl now.bowl (cue-wire-id rpc-id.pole) uri.pole q.sage))
+        ~[(fine-read our.bowl now.bowl eyre-id.pole (cue-wire-id rpc-id.pole) uri.pole p.sage q.sage)]
       ?-    task.pole
           %chum
         :_  this
@@ -1891,5 +2331,22 @@
   ?+    pole  (on-watch:def `path`pole)
       [%http-response eyre-id=@ta ~]
     `this
+  ::
+  ::  the first watch opens the dojo session; later watchers join it
+      [%dojo ses=@ta ~]
+    ?>  =(src our):bowl
+    ?>  (valid-name:dj ses.pole)
+    ?:  (~(has by dojo) ses.pole)
+      `this
+    =^  evicted=(list @ta)  dojo  (retain:dj dojo)
+    :_  this(dojo (~(put by dojo) ses.pole [*sole-share:sole | now.bowl]))
+    %+  weld
+      ^-  (list card)
+      (zing (turn evicted (cury dojo-drop our.bowl)))
+    ^-  (list card)
+    :~  :*  %pass  /dojo/[ses.pole]  %agent  [our.bowl %dojo]
+            %watch  /sole/(scot %p our.bowl)/(dojo-ses:dj ses.pole)
+        ==
+    ==
   ==
 --

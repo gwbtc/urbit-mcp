@@ -15,8 +15,11 @@ tool `mcp/scry-agent`.
 
 1. **Prefer the specific tool over `dojo/command`.** A scry, poke, file read,
    or desk commit each has its own tool with structured errors. Fall back to
-   `dojo/command` only when no dedicated tool fits. Note that each
-   `dojo/command` call is its own session; you cannot do multi-line inputs.
+   `dojo/command` only when no dedicated tool fits. Its input may span
+   lines: a tall-form expression, or several commands that run in order
+   and share state (`=foo 1`, then `(add foo 2)`). Each call gets a fresh
+   Dojo session unless you pass `sole-id`; calls that share a `sole-id`
+   share variables. Drop a named session with `dojo/close`.
 2. **Verify Hoon on the ship.** After changing desk files that don't show up
    in the results of a `mcp/commit-desk` call, check with `mcp/test-build` or
    by committing the desk and reading the error output — nothing else proves
@@ -44,8 +47,8 @@ tool `mcp/scry-agent`.
 
 - Poke an agent: `mcp/poke-our-agent` with `agent`, `mark`, and `data` (a
   Hoon expression of the mark's type).
-- Anything else: `dojo/command` with one Dojo line; the tool returns the text
-  Dojo printed before its next prompt.
+- Anything else: `dojo/command`; the tool enters each line of input in turn
+  and returns the text Dojo printed.
 
 ### Develop Hoon on a desk
 
@@ -60,6 +63,34 @@ The edit–build–test loop, entirely through MCP:
 4. `mcp/install-app` to install a desk (local or remote)
 5. `dojo/nuke-agent` and `dojo/revive-desk` to restart agents and fix
    `%load-failed` errors.
+
+### Run Aqua tests
+
+Aqua boots virtual ships inside the `%aqua` agent; `/ted/ph` threads drive
+them. The `aqua/*` tools run such a thread in the background and capture what
+the virtual ships print.
+
+1. `aqua/pill` builds a brass pill and loads it into `%aqua`. `%aqua` must be
+   running from `%base`; the tool says so if it is not. Rebuild the pill after
+   changing a desk the virtual ships boot with.
+2. `aqua/start` with `desk` and `path` (e.g. `/ted/ph/add`) returns a `runId`
+   at once. One run is active at a time.
+3. `aqua/read` with the `runId` returns one page of the run:
+   - `status`: `starting`, `running`, `cancelling`, and `finishing` mean the
+     run is still going. `finishing` drains pending effects. `completed`,
+     `failed`, `cancelled`, and `interrupted` are final.
+   - `records`: each has `cursor`, `ship`, `effect`, `type`, `text`,
+     `observedAt`, `elapsedMs`, and `truncated`. The times are when the host
+     saw the effect, not virtual-ship time.
+   - `nextCursor`: pass it as `cursor` on the next read. It is exclusive, and
+     it moves past records your `ships` and `effects` filters dropped. Reuse
+     an old cursor to read the same records with other filters.
+   - `hasMore`: more records are buffered now. It says nothing about whether
+     the thread has finished; poll until `status` is final.
+   - `gap`: present when the server evicted records before your cursor.
+   - Only effect tags named at `aqua/start` are captured.
+4. `aqua/cancel` stops the thread, not `%aqua` or its ships. `aqua/release`
+   drops a finished run's records; the server keeps at most four runs.
 
 ### Extend the MCP server
 
