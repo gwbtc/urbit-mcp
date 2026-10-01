@@ -113,3 +113,19 @@ URI is needed.
    arguments before telling the user it works.
 4. `mcp/tool-search` (`scry://gx/mcp-server/mcp/tools/{+toolPath}/json`)
    confirms what is registered under a name prefix.
+
+## Deleting a feature
+
+No MCP tool deletes a feature; poke the agent through `dojo/command`. Each
+poke takes the key as a cord: the name of a tool, prompt or template, or the
+URI of a resource.
+
+```
+:mcp-server &delete-tool 'my/tool'
+:mcp-server &delete-prompt 'my/prompt'
+:mcp-server &delete-resource 'https://example.com/doc'
+:mcp-server &delete-template 'my/template'
+```
+
+A deleted default (one under `/fil/mcp` on the %mcp desk) comes back the next
+time the agent loads.
