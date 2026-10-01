@@ -1057,6 +1057,57 @@
                            `old
             ==
         ==
+      ::
+      ::  delete the feature with the key the add pokes replace on:
+      ::  a resource's uri, or the name of a tool, prompt or template
+          ?(%delete-tool %delete-prompt %delete-resource %delete-template)
+        ?>  =(src our):bowl
+        =/  key=@t  !<(@t vase)
+        =/  new=state-2
+          ?-    mark
+              %delete-tool
+            %=  state
+              tools  %-  silt
+                     %+  skip
+                       ~(tap in tools)
+                     |=(old=tool:mcp =(key name.old))
+            ==
+          ::
+              %delete-prompt
+            %=  state
+              prompts  %-  silt
+                       %+  skip
+                         ~(tap in prompts)
+                       |=(old=prompt:mcp =(key name.old))
+            ==
+          ::
+              %delete-resource
+            %=  state
+              resources  %-  silt
+                         %+  skip
+                           ~(tap in resources)
+                         |=(old=resource:mcp =(key uri.old))
+            ==
+          ::
+              %delete-template
+            %=  state
+              templates  %-  silt
+                         %+  skip
+                           ~(tap in templates)
+                         |=(old=template:resource:mcp =(key name.old))
+            ==
+          ==
+        ::  deleting a feature we do not have is not a list change
+        :_  this(state new)
+        ?:  =(state new)
+          ~
+        %^  broadcast-list-changed  bowl  listeners
+        ?-  mark
+          %delete-tool      %tools
+          %delete-prompt    %prompts
+          %delete-resource  %resources
+          %delete-template  %resources
+        ==
       ==
   ++  handle-req
     |=  [eyre-id=@ta req=inbound-request:eyre]
