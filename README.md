@@ -28,45 +28,60 @@ $ zig build -Ddesk=~/path/to/zod/mcp
 > |install our %mcp
 ```
 
-### 2. Authentication Setup
+### 2. Register with your client
 
-Get your ship's web login code from the Dojo:
+`%mcp-server` is its own OAuth server. Add the ship's `/mcp` URL to your client with no credentials; the client opens a browser, you log in with your ship's web login code, and you click **Allow**.
+
+Get the code from the Dojo:
 
 ```dojo
 > +code
 lidlut-tabwed-pillex-ridrup
-~zod:dojo>
 ```
 
-Authenticate and get session cookie:
+**Claude Code**
+
+```bash
+claude mcp add --transport http zod http://localhost:80/mcp --scope user
+```
+
+Then run `/mcp` inside Claude Code, pick `zod`, and choose **Authenticate**.
+
+Any other client that follows the MCP authorization spec works the same way: give it the URL and start its login.
+
+An access token lasts one hour; the client renews it with a refresh token that lasts 30 days. A token can do anything your login code can. To cut off every client at once, run this in the Dojo; each client must then log in again:
+
+```dojo
+> :mcp-server &revoke-oauth ~
+```
+
+A ship reached over the network must be served over HTTPS. If a proxy ends TLS in front of the ship, it must send `X-Forwarded-Proto: https`.
+
+### 3. Cookie authentication (fallback)
+
+A client that cannot do OAuth can send an Eyre session cookie instead. Log in with your code:
 
 ```bash
 curl -i http://localhost:80/~/login -X POST -d "password=lidlut-tabwed-pillex-ridrup"
 ```
 
-Extract the cookie from the `set-cookie` header, which will look like this:
+Copy the cookie from the `set-cookie` header, which looks like this:
 
 ```
 urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm
 ```
 
-### 3a. Register with Codex
+Send it as a header with every request:
 
-Simply add this to your `~/.codex/config.toml`:
+```bash
+claude mcp add --transport http zod http://localhost:80/mcp --header "Cookie: urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm" --scope user
+```
 
 ```toml
 [mcp_servers.zod]
 enabled = true
 url = "http://localhost:80/mcp"
 http_headers = { "Cookie" = "urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm" }
-```
-
-### 3b. Register with Claude Code
-
-Add the MCP server to Claude using HTTP transport:
-
-```bash
-claude mcp add --transport http zod http://localhost:80/mcp --header "Cookie: urbauth-~your-ship=0v3.j2062.1prp1.qne4e.goq3h.ksudm" --scope user
 ```
 
 ## Usage
