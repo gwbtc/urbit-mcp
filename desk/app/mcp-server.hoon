@@ -2,7 +2,7 @@
 /+  dbug, verb, server, default-agent, pf=pretty-file, io=strandio,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
     scry-uri=uri-scry, aq=mcp-aqua, dj=mcp-dojo, ma=mcp-arguments,
-    mm=mcp-mime
+    mm=mcp-mime, oa=mcp-oauth
 ::
 ::  default features are imported with /~
 ::  to force rebuilds when they're added or changed
@@ -373,8 +373,8 @@
 ::
 ::  +json-response: respond with status code and JSON body
 ::    Used for endpoints that must return JSON (e.g. OAuth discovery
-::    stubs at /.well-known/*) so MCP clients that probe per spec do
-::    not choke trying to parse Eyre's HTML fallback as JSON.
+::    at /.well-known/*) so MCP clients that probe per spec do not
+::    choke trying to parse Eyre's HTML fallback as JSON.
 ::
 ++  json-response
   |=  [eyre-id=@ta status=@ud =json]
@@ -391,6 +391,25 @@
     %-  as-octt:mimes:html
     (trip (en:json:html json))
 ::
+::  +oauth-response: a response from the authorization server,
+::  which no cache may store and no page may frame
+++  oauth-response
+  |=  $:  eyre-id=@ta
+          status=@ud
+          headers=(list [key=@t value=@t])
+          body=(unit octs)
+      ==
+  ^-  (list card)
+  %+  give-simple-payload:app:server
+    eyre-id
+  ^-  simple-payload:http
+  :_  body
+  :-  status
+  %+  weld  headers
+  :~  ['cache-control' 'no-store']
+      ['x-frame-options' 'DENY']
+  ==
+::
 +$  card  card:agent:gall
 ::
 ::  a live subscriptions/listen stream keyed by eyre-id; sub-id is
@@ -404,13 +423,13 @@
   ==
 ::
 ++  install-defaults
-  |=  $:  old=state-2
+  |=  $:  old=state-3
           tools=(list tool:mcp)
           prompts=(list prompt:mcp)
           resources=(list resource:mcp)
           templates=(list template:resource:mcp)
       ==
-  ^-  state-2
+  ^-  state-3
   %=  old
     tools      (merge-features tools tools.old |=(t=tool:mcp name.t))
     prompts    (merge-features prompts prompts.old |=(p=prompt:mcp name.p))
@@ -422,7 +441,7 @@
 ::  classes whose feature set differs between .old and .new
 ::
 ++  load-changed-cards
-  |=  [=bowl:gall old=state-2 new=state-2]
+  |=  [=bowl:gall old=state-3 new=state-3]
   ^-  (list card)
   %-  zing
   ^-  (list (list card))
@@ -444,6 +463,7 @@
   $%  state-0
       state-1
       state-2
+      state-3
   ==
 +$  state-0
   $:  %0
@@ -472,6 +492,17 @@
       listeners=(map @ta listener)
       aqua=state:aq
       dojo=state:dj
+  ==
++$  state-3
+  $:  %3
+      tools=(set tool:mcp)
+      prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
+      templates=(set template:resource:mcp)
+      listeners=(map @ta listener)
+      aqua=state:aq
+      dojo=state:dj
+      oauth=state:oa
   ==
 ::
 ::  support aqua workflows, persist dojo sessions
@@ -502,6 +533,21 @@
       ~
       aqua.old
       dojo.old
+  ==
+::
+::  serve oauth: clients log in through the browser
+++  state-2-to-3
+  |=  old=state-2
+  ^-  state-3
+  :*  %3
+      tools.old
+      prompts.old
+      resources.old
+      templates.old
+      listeners.old
+      aqua.old
+      dojo.old
+      *state:oa
   ==
 ::
 ::  +dojo-drop: stop a held dojo session's
@@ -563,7 +609,7 @@
 ::
 %-  agent:dbug
 ^-  agent:gall
-=|  state-2
+=|  state-3
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
@@ -728,11 +774,12 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
-  =/  migrated=state-2
+  =/  migrated=state-3
     ?-  -.old
-      %0  (state-1-to-2 (state-0-to-1 old))
-      %1  (state-1-to-2 old)
-      %2  old
+      %0  (state-2-to-3 (state-1-to-2 (state-0-to-1 old)))
+      %1  (state-2-to-3 (state-1-to-2 old))
+      %2  (state-2-to-3 old)
+      %3  old
     ==
   ::  a reload orphans the active run's thread; stop and close it
   =^  cleanup=(list card)  aqua.migrated
@@ -746,7 +793,7 @@
         `'agent reloaded; managed thread stopped'
         &
     ==
-  =/  new=state-2
+  =/  new=state-3
     %:  install-defaults
         migrated
         default-tools
@@ -778,20 +825,17 @@
           %arvo  %e  %connect
           [`/mcp dap.bowl]
       ==
-      ::  Bind /.well-known so we can stub OAuth discovery endpoints.
-      ::  MCP clients probe these per the draft auth spec; without a
-      ::  binding Eyre redirects to /apps/landscape/ (HTML), and the
-      ::  client errors trying to parse HTML as JSON.
+      ::  Bind /.well-known to serve the OAuth discovery documents
+      ::  MCP clients probe for; without a binding Eyre redirects to
+      ::  /apps/landscape/ (HTML), and the client errors trying to
+      ::  parse HTML as JSON.
       ::
       :*  %pass  /eyre/connect/well-known
           %arvo  %e  %connect
           [[~ ~['.well-known']] dap.bowl]
       ==
-      ::  Bind /oauth so DCR/authorize/token probes from MCP clients
-      ::  get a clean RFC 6749 JSON error rather than Eyre's HTML
-      ::  login fallback. Without this the Claude Code /mcp dialog's
-      ::  OAuth flow disconnects the session even when cookie auth
-      ::  is configured.
+      ::  Bind /oauth for the authorization server's register,
+      ::  authorize and token endpoints.
       ::
       :*  %pass  /eyre/connect/oauth
           %arvo  %e  %connect
@@ -878,6 +922,12 @@
       ::
           %handle-http-request
         (handle-req !<([@ta inbound-request:eyre] vase))
+      ::
+      ::  forget every oauth client and token; each client must
+      ::  register and win the user's consent again
+          %revoke-oauth
+        ?>  =(src our):bowl
+        `this(oauth *state:oa)
       ::
           ?(%import-tools %import-prompts %import-resources %import-templates)
         ?>  =(src our):bowl
@@ -1063,7 +1113,7 @@
           ?(%delete-tool %delete-prompt %delete-resource %delete-template)
         ?>  =(src our):bowl
         =/  key=@t  !<(@t vase)
-        =/  new=state-2
+        =/  new=state-3
           ?-    mark
               %delete-tool
             %=  state
@@ -1109,32 +1159,282 @@
           %delete-template  %resources
         ==
       ==
+  ::  +handle-oauth: the authorization server. Eyre's login page
+  ::  checks +code; we register clients, ask the user's consent,
+  ::  and trade codes and refresh tokens for access tokens.
+  ::
+  ++  handle-oauth
+    |=  [eyre-id=@ta req=inbound-request:eyre site=tape base=@t]
+    ^-  (quip card _this)
+    =.  oauth  (prune:oa oauth now.bowl)
+    =/  method=@t  method.request.req
+    =/  as-html=(list [key=@t value=@t])
+      ['content-type' 'text/html; charset=utf-8']~
+    =/  as-json=(list [key=@t value=@t])
+      ['content-type' 'application/json']~
+    ::  RFC 7591 dynamic client registration
+    ::
+    ?:  &(=("/oauth/register" site) =('POST' method))
+      =/  jon=json
+        ?~  body.request.req
+          ~
+        (fall (de:json:html q.u.body.request.req) ~)
+      =/  new=(unit [id=@t state:oa])
+        =/  redirects=(unit (list @t))
+          ((ot ~[['redirect_uris' (ar so)]]):dejs-soft:format jon)
+        ?~  redirects
+          ~
+        %:  register:oa
+            oauth
+            now.bowl
+            eny.bowl
+            (fall ((ot ~[['client_name' so]]):dejs-soft:format jon) '')
+            u.redirects
+        ==
+      ?~  new
+        :_  this
+        %:  oauth-response
+            eyre-id
+            400
+            as-json
+            %-  some
+            %-  as-octs:mimes:html
+            %-  en:json:html
+            %-  pairs:enjs:format
+            :~  ['error' s+'invalid_client_metadata']
+                ['error_description' s+'redirect_uris missing or malformed']
+            ==
+        ==
+      =/  =client:oa  (~(got by clients.+.u.new) id.u.new)
+      :_  this(oauth +.u.new)
+      %:  oauth-response
+          eyre-id
+          201
+          as-json
+          %-  some
+          %-  as-octs:mimes:html
+          %-  en:json:html
+          %-  pairs:enjs:format
+          :~  ['client_id' s+id.u.new]
+              ['client_name' s+name.client]
+              ['redirect_uris' a+(turn redirects.client |=(r=@t s+r))]
+              ['token_endpoint_auth_method' s+'none']
+              ['grant_types' a+~[s+'authorization_code' s+'refresh_token']]
+              ['response_types' a+~[s+'code']]
+          ==
+      ==
+    ::  the user's browser arrives here from the client
+    ::
+    ?:  &(=("/oauth/authorize" site) =('GET' method))
+      =/  args=(map @t @t)  (parse-query:oa url.request.req)
+      =/  client-id=@t  (~(gut by args) 'client_id' '')
+      =/  redirect=@t   (~(gut by args) 'redirect_uri' '')
+      ::  never redirect to an address the client did not register
+      ?.  (registered:oa oauth client-id redirect)
+        :_  this
+        %:  oauth-response
+            eyre-id
+            400
+            as-html
+            %-  some
+            %-  error-page:oa
+            "This ship does not know that client or its redirect address. Remove the server from your MCP client, add it again, and retry."
+        ==
+      =/  opaque=(unit @t)  (~(get by args) 'state')
+      =/  challenge=@t  (~(gut by args) 'code_challenge' '')
+      ?.  ?&  =('code' (~(gut by args) 'response_type' ''))
+              =('S256' (~(gut by args) 'code_challenge_method' ''))
+              !=('' challenge)
+          ==
+        :_  this
+        %:  oauth-response
+            eyre-id
+            303
+            :~  :-  'location'
+                %+  callback:oa  redirect
+                :-  ['error' 'invalid_request']
+                ?~(opaque ~ ['state' u.opaque]~)
+            ==
+            ~
+        ==
+      ::  Eyre's login page takes +code and sends the browser back
+      ::  here. Encode our whole url: Eyre would cut a bare one at
+      ::  its first '&'.
+      ?.  authenticated.req
+        :_  this
+        %:  oauth-response
+            eyre-id
+            307
+            :~  :-  'location'
+                %+  rap  3
+                :~  '/~/login?redirect='
+                    (crip (en-urlt:html (trip url.request.req)))
+                ==
+            ==
+            ~
+        ==
+      =^  id=@t  oauth
+        %:  open-request:oa
+            oauth
+            now.bowl
+            eny.bowl
+            client-id
+            [redirect challenge opaque]
+        ==
+      :_  this
+      %:  oauth-response
+          eyre-id
+          200
+          as-html
+          %-  some
+          %:  consent-page:oa
+              our.bowl
+              name:(~(got by clients.oauth) client-id)
+              redirect
+              id
+          ==
+      ==
+    ::  the consent form posts back here. Eyre's cookie rides along
+    ::  on posts from any site, so the form must come from our own
+    ::  page: same origin, carrying a request id only we showed.
+    ::
+    ?:  &(=("/oauth/authorize" site) =('POST' method))
+      ?.  ?&  authenticated.req
+              =(`base (get-header:http 'origin' header-list.request.req))
+          ==
+        [(oauth-response eyre-id 403 ~ ~) this]
+      =/  form=(map @t @t)  (parse-form:oa body.request.req)
+      =/  id=@t  (~(gut by form) 'request' '')
+      =/  done=(unit [url=@t state:oa])
+        ?:  =('allow' (~(gut by form) 'choice' ''))
+          (approve:oa oauth now.bowl eny.bowl id)
+        (deny:oa oauth now.bowl id)
+      ?~  done
+        :_  this
+        %:  oauth-response
+            eyre-id
+            400
+            as-html
+            %-  some
+            %-  error-page:oa
+            "This request has expired. Start again from your MCP client."
+        ==
+      :_  this(oauth +.u.done)
+      (oauth-response eyre-id 303 ['location' url.u.done]~ ~)
+    ::  the client trades a code or a refresh token for tokens
+    ::
+    ?:  &(=("/oauth/token" site) =('POST' method))
+      =/  form=(map @t @t)  (parse-form:oa body.request.req)
+      =/  client-id=@t   (~(gut by form) 'client_id' '')
+      =/  grant-type=@t  (~(gut by form) 'grant_type' '')
+      ::  a client we evicted must learn to register again
+      ?.  (~(has by clients.oauth) client-id)
+        :_  this
+        %:  oauth-response
+            eyre-id
+            401
+            as-json
+            %-  some
+            %-  as-octs:mimes:html
+            (en:json:html (pairs:enjs:format ~[['error' s+'invalid_client']]))
+        ==
+      ?.  ?=(?(%'authorization_code' %'refresh_token') grant-type)
+        :_  this
+        %:  oauth-response
+            eyre-id
+            400
+            as-json
+            %-  some
+            %-  as-octs:mimes:html
+            %-  en:json:html
+            (pairs:enjs:format ~[['error' s+'unsupported_grant_type']])
+        ==
+      =^  got=(unit tokens:oa)  oauth
+        ?-    grant-type
+            %'authorization_code'
+          %:  redeem:oa
+              oauth
+              now.bowl
+              eny.bowl
+              client-id
+              (~(gut by form) 'code' '')
+              (~(get by form) 'redirect_uri')
+              (~(gut by form) 'code_verifier' '')
+          ==
+        ::
+            %'refresh_token'
+          %:  renew:oa
+              oauth
+              now.bowl
+              eny.bowl
+              client-id
+              (~(gut by form) 'refresh_token' '')
+          ==
+        ==
+      :_  this
+      ?~  got
+        %:  oauth-response
+            eyre-id
+            400
+            as-json
+            %-  some
+            %-  as-octs:mimes:html
+            (en:json:html (pairs:enjs:format ~[['error' s+'invalid_grant']]))
+        ==
+      %:  oauth-response
+          eyre-id
+          200
+          as-json
+          %-  some
+          %-  as-octs:mimes:html
+          %-  en:json:html
+          %-  pairs:enjs:format
+          :~  ['access_token' s+access.u.got]
+              ['token_type' s+'Bearer']
+              ['expires_in' (numb:enjs:format (div access-ttl:oa ~s1))]
+              ['refresh_token' s+refresh.u.got]
+          ==
+      ==
+    :_  this
+    %:  oauth-response
+        eyre-id
+        404
+        as-json
+        %-  some
+        %-  as-octs:mimes:html
+        (en:json:html (pairs:enjs:format ~[['error' s+'not found']]))
+    ==
+  ::
   ++  handle-req
     |=  [eyre-id=@ta req=inbound-request:eyre]
     ^-  (quip card _this)
-    ::  OAuth discovery probes from MCP clients land here via the
-    ::  /.well-known binding. We don't speak OAuth; auth is by
-    ::  Cookie or session header per Eyre. Return RFC 9728 protected-
-    ::  resource metadata with no authorization servers, signalling
-    ::  to the client that it should proceed with the auth scheme
-    ::  it already has (rather than triggering an OAuth handshake
-    ::  that ends in Eyre's HTML login fallback).
-    ::
     =/  url-tape=tape  (trip url.request.req)
-    =/  host=@t
-      =/  h=(unit @t)
-        (get-header:http 'host' header-list.request.req)
-      ?~(h 'localhost' u.h)
+    ::  the url's path, without its query
+    =/  site=tape
+      (scag (fall (find "?" url-tape) (lent url-tape)) url-tape)
+    =/  headers=header-list:http  header-list.request.req
+    =/  host=@t  (fall (get-header:http 'host' headers) 'localhost')
+    ::  our own origin, as the client sees it; a proxy that ends
+    ::  tls in front of us says so in x-forwarded-proto
+    =/  base=@t
+      %+  rap  3
+      :~  ?:  ?|  secure.req
+                  =(`'https' (get-header:http 'x-forwarded-proto' headers))
+              ==
+            'https://'
+          'http://'
+          host
+      ==
     ::
-    ::  Reject browser origins that do not correspond to the local
-    ::  endpoint or our EAuth URL.
-    =/  local=?  (loopback-authority (trip host))
-    =/  origin=(unit @t)
-      (get-header:http 'origin' header-list.request.req)
+    ::  Reject browser origins that do not correspond to this
+    ::  endpoint, the local machine, or our EAuth URL.
+    =/  origin=(unit @t)  (get-header:http 'origin' headers)
     =/  origin-allowed=?
       ?~  origin
         .y
-      ?:  local
+      ?:  =(u.origin base)
+        .y
+      ?:  (loopback-authority (trip host))
         (loopback-origin u.origin)
       =/  eauth=(unit @t)
         .^  (unit @t)
@@ -1146,64 +1446,41 @@
       =(u.origin u.eauth)
     ?.  origin-allowed
       [(simple-response eyre-id 403 ~) this]
-    =/  base=@t  (rap 3 'http://' host ~)
-    ::  RFC 9728 protected-resource metadata at the spec'd path.
-    ::  Empty authorization_servers + bearer_methods=header tells
-    ::  the client to use the auth header it already has.
+    ::  OAuth discovery: RFC 9728 protected-resource metadata names
+    ::  us as our own authorization server. Clients ask for it at
+    ::  the bare path and at the path suffixed with the resource's.
     ::
-    ?:  =("/.well-known/oauth-protected-resource" url-tape)
-      =/  meta=json
-        %-  pairs:enjs:format
-        :~  ['resource' s+(cat 3 base '/mcp')]
-            ['authorization_servers' a+~]
-            ['bearer_methods_supported' a+~[s+'header']]
+    ?:  ?|  =("/.well-known/oauth-protected-resource" site)
+            =("/.well-known/oauth-protected-resource/mcp" site)
         ==
-      :_  this
-      (json-response eyre-id 200 meta)
-    ::  RFC 8414 authorization-server metadata. We don't actually
-    ::  speak OAuth, but a Zod-valid stub keeps the client out of
-    ::  parse-error territory; the OAuth flow itself fails cleanly
-    ::  at the /oauth/* endpoints below.
-    ::
-    ?:  =("/.well-known/oauth-authorization-server" url-tape)
-      =/  meta=json
-        %-  pairs:enjs:format
-        :~  ['issuer' s+base]
-            ['authorization_endpoint' s+(cat 3 base '/oauth/authorize')]
-            ['token_endpoint' s+(cat 3 base '/oauth/token')]
-            ['registration_endpoint' s+(cat 3 base '/oauth/register')]
-            ['response_types_supported' a+~[s+'code']]
-            ['grant_types_supported' a+~[s+'authorization_code']]
-            ['code_challenge_methods_supported' a+~[s+'S256']]
-            ['token_endpoint_auth_methods_supported' a+~[s+'none']]
-        ==
-      :_  this
-      (json-response eyre-id 200 meta)
+      [(json-response eyre-id 200 (resource-meta:oa base)) this]
+    ?:  =("/.well-known/oauth-authorization-server" site)
+      [(json-response eyre-id 200 (server-meta:oa base)) this]
     ::  Any other /.well-known/* probe gets a JSON 404.
     ::
-    ?:  ?&  (gte (lent url-tape) 12)
-            =("/.well-known" (scag 12 url-tape))
-        ==
+    ?:  =("/.well-known" (scag 12 site))
       :_  this
       (json-response eyre-id 404 (pairs:enjs:format ~[['error' s+'not found']]))
-    ::  OAuth endpoint stubs. We don't speak OAuth; auth is via the
-    ::  Cookie/header configured on the MCP client. Returning a
-    ::  proper RFC 6749 JSON error keeps clients (e.g. Claude Code's
-    ::  /mcp dialog) from choking on Eyre's HTML login fallback.
+    ?:  =("/oauth" (scag 6 site))
+      (handle-oauth eyre-id req site base)
+    ::  /mcp takes an Eyre session (cookie) or one of our own OAuth
+    ::  access tokens. The 401 points the client at the metadata
+    ::  above, which starts its OAuth flow.
     ::
-    ?:  ?&  (gte (lent url-tape) 6)
-            =("/oauth" (scag 6 url-tape))
-        ==
-      =/  err=json
-        %-  pairs:enjs:format
-        :~  ['error' s+'unsupported_response_type']
-            ['error_description' s+'this server does not implement OAuth']
+    =/  token=(unit @t)  (bearer:oa headers)
+    ?.  ?|  authenticated.req
+            &(?=(^ token) (check:oa oauth now.bowl u.token))
         ==
       :_  this
-      (json-response eyre-id 400 err)
-    ?.  authenticated.req
-      :_  this
-      (send-event eyre-id (internal:error:rpc ~ 'Authentication required' ~))
+      %^  simple-response  eyre-id  401
+      :~  :-  'www-authenticate'
+          %+  rap  3
+          :~  'Bearer resource_metadata="'
+              base
+              '/.well-known/oauth-protected-resource"'
+              ?~(token '' ', error="invalid_token"')
+          ==
+      ==
     ?+  method.request.req
       [(simple-response eyre-id 405 ~[['allow' 'POST']]) this]
     ::

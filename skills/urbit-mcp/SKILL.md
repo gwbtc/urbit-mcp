@@ -7,9 +7,10 @@ description: Operate an Urbit ship through the %mcp server. Use when the user as
 
 The `%mcp` desk runs a Gall agent, `%mcp-server`, that exposes an Urbit ship
 over the Model Context Protocol. Your MCP client connects to it over HTTP
-(`<ship-url>/mcp` with an `urbauth` cookie). Tool names below appear in your
-harness prefixed with the server name, e.g. `mcp__zod__mcp_scry-agent` for the
-tool `mcp/scry-agent`.
+at `<ship-url>/mcp`, logged in through OAuth (the user types the ship's
+`+code` in a browser) or with an `urbauth` cookie. Tool names below appear in
+your harness prefixed with the server name, e.g. `mcp__zod__mcp_scry-agent`
+for the tool `mcp/scry-agent`.
 
 ## Ground rules
 
