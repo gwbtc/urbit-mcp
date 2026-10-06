@@ -1290,7 +1290,6 @@
           %:  consent-page:oa
               our.bowl
               name:(~(got by clients.oauth) client-id)
-              redirect
               id
           ==
       ==

@@ -357,8 +357,107 @@
       ['token_endpoint_auth_methods_supported' a+~[s+'none']]
   ==
 ::
+::  +styling: the look of eyre's login page, which the user has
+::  just come from; copied from +auth-styling in eyre, less the
+::  rules for parts these pages lack
+++  styling
+  '''
+  @import url("https://rsms.me/inter/inter.css");
+  @font-face {
+      font-family: "Source Code Pro";
+      src: url("https://storage.googleapis.com/media.urbit.org/fonts/scp-regular.woff");
+      font-weight: 400;
+      font-display: swap;
+  }
+  :root {
+    --gray-100: #E5E5E5;
+    --gray-400: #999999;
+    --gray-800: #333333;
+    --white: #FFFFFF;
+  }
+  html {
+    font-family: Inter, sans-serif;
+    height: 100%;
+    margin: 0;
+    width: 100%;
+    background: var(--white);
+    color: var(--gray-800);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+  }
+  body {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    max-width: 300px;
+    padding: 1rem;
+    width: 100%;
+  }
+  input {
+    background: var(--gray-100);
+    border: 2px solid transparent;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    font-size: inherit;
+    color: var(--gray-800);
+    box-shadow: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  input:disabled {
+    background: var(--gray-100);
+    color: var(--gray-400);
+  }
+  p.note {
+    color: var(--gray-400);
+    font-weight: 400;
+    overflow-wrap: anywhere;
+  }
+  form {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  button[type=submit] {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: var(--gray-800);
+    color: var(--white);
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button[type=submit].deny {
+    background: var(--gray-100);
+    color: var(--gray-800);
+  }
+  .mono {
+    font-family: 'Source Code Pro', monospace;
+  }
+  @media all and (prefers-color-scheme: dark) {
+  :root {
+    --white: #000000;
+    --gray-800: #E5E5E5;
+    --gray-400: #808080;
+    --gray-100: #333333;
+  }
+  }
+  @media screen and (min-width: 30em) {
+    html {
+      font-size: 14px;
+    }
+  }
+  '''
+::
 ++  page
-  |=  [title=tape body=marl]
+  |=  body=marl
   ^-  octs
   %-  as-octt:mimes:html
   %+  weld  "<!DOCTYPE html>"
@@ -366,11 +465,11 @@
   ;html
     ;head
       ;meta(charset "utf-8");
-      ;meta(name "viewport", content "width=device-width, initial-scale=1");
-      ;title: {title}
+      ;meta(name "viewport", content "width=device-width, initial-scale=1, shrink-to-fit=no");
+      ;title:"Urbit"
+      ;style:"{(trip styling)}"
     ==
-    ;body(style "font-family: sans-serif; max-width: 32rem; margin: 4rem auto; padding: 0 1rem;")
-      ;h1: {title}
+    ;body
       ;*  body
     ==
   ==
@@ -378,25 +477,26 @@
 ++  error-page
   |=  msg=tape
   ^-  octs
-  %+  page  "Cannot authorize"
-  ;=  ;p: {msg}
+  %-  page
+  ;=  ;p:"Cannot authorize"
+      ;p.note:"{msg}"
   ==
 ::
 ::  +consent-page: ask the user to let a client in. .id goes back
 ::  in the form; a page on another origin cannot read it
 ++  consent-page
-  |=  [our=@p name=@t redirect=@t id=@t]
+  |=  [our=@p name=@t id=@t]
   ^-  octs
-  %+  page  "Allow access to {(scow %p our)}?"
-  ;=  ;p
-        ;b: {?:(=('' name) "An MCP client" (trip name))}
-      ==
-      ;p: wants to connect to this ship's MCP server. It will be able to do anything you can do from the Dojo.
-      ;p: Your answer goes to {(trip redirect)}
+  %-  page
+  ;=  ;p:"Urbit ID"
+      ;input(value "{(scow %p our)}", disabled "true", class "mono");
+      ;p:"MCP client"
+      ;input(value "{?:(=('' name) "unnamed" (trip name))}", disabled "true");
+      ;p.note:"Allowing access lets this MCP client do anything you can do from this ship's Dojo."
       ;form(method "post", action "/oauth/authorize")
         ;input(type "hidden", name "request", value "{(trip id)}");
-        ;button(type "submit", name "choice", value "allow"): Allow
-        ;button(type "submit", name "choice", value "deny"): Deny
+        ;button(type "submit", name "choice", value "allow"):"Allow"
+        ;button.deny(type "submit", name "choice", value "deny"):"Deny"
       ==
   ==
 --
