@@ -1239,8 +1239,15 @@
         =/  method=(unit json)  (~(get jo:jut jon) /method)
         =/  id=(unit json)      (~(get jo:jut jon) /id)
         ?~  id
-          ::  a request with no id is an MCP 2025-11-25 notification
+          ::
+          ::  a message with no id is a notification, or a response to a
+          ::  request we sent. both eras accept these with 202 and no body
           :_  this
+          ?:  ?|  ?=([~ %s *] method)
+                  ?=(^ (~(get jo:jut jon) /result))
+                  ?=(^ (~(get jo:jut jon) /error))
+              ==
+            (simple-response eyre-id 202 ~)
           (json-response eyre-id 400 (request:error:rpc ~ 'Missing JSON RPC request ID' ~))
         ?.  ?=(?([%n *] [%s *]) u.id)
           :_  this
