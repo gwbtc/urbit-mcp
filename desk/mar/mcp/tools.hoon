@@ -1,5 +1,5 @@
 /-  mcp
-|_  tools=(list tool:mcp)
+|_  tools=(list spec:tool:mcp)
 ++  grad  %noun
 ++  grow
   |%
@@ -10,7 +10,7 @@
       :-  %a
       %+  turn
         tools
-      |=  =tool:mcp
+      |=  tool=spec:tool:mcp
       %-  pairs:enjs:format
       :~  ['name' [%s name.tool]]
           ['description' [%s desc.tool]]
@@ -35,6 +35,6 @@
   --
 ++  grab
   |%
-  ++  noun  ,(list tool:mcp)
+  ++  noun  ,(list spec:tool:mcp)
   --
 --

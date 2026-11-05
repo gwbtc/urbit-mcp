@@ -1,5 +1,5 @@
 /-  mcp
-|_  prompts=(list prompt:mcp)
+|_  prompts=(list spec:prompt:mcp)
 ++  grad  %noun
 ++  grow
   |%
@@ -10,7 +10,7 @@
       :-  %a
       %+  turn
         prompts
-      |=  =prompt:mcp
+      |=  prompt=spec:prompt:mcp
       %-  pairs:enjs:format
       :~  ['name' s+name.prompt]
           ['title' s+title.prompt]
@@ -43,6 +43,6 @@
   --
 ++  grab
   |%
-  ++  noun  ,(list prompt:mcp)
+  ++  noun  ,(list spec:prompt:mcp)
   --
 --

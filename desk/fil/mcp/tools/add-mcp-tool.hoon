@@ -60,6 +60,9 @@
       :-  name
       [(type:parameter:tool:mcp p.u.typ-arg) p.u.desc-arg]
     ;<  our=ship  bind:m  get-our:io
+    ::  compile once here so a gate that does not build is refused now;
+    ::  the agent keeps the TEXT and compiles it again when the tool is
+    ::  called (a gate in agent state stops nesting at the next kernel)
     =/  vax=vase
       %+  slap
         !>  :*  mcp=mcp
@@ -69,12 +72,14 @@
                 ..zuse
             ==
       (ream p.u.ted)
+    =/  built=thread-builder:tool:mcp  !<(thread-builder:tool:mcp vax)
     ;<  ~  bind:m
       %-  send-raw-card:io
       :*  %pass   /add-tool
           %agent  [our %mcp-server]
           %poke   %add-tool
-          !>([p.u.nam p.u.des par req !<(thread-builder:tool:mcp vax)])
+          !>  ^-  [spec:tool:mcp source:mcp]
+          [[p.u.nam p.u.des par req] [%hoon p.u.ted]]
       ==
     ;<  ~  bind:m  (take-poke-ack:io /add-tool)
     %-  pure:m

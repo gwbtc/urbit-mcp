@@ -69,14 +69,12 @@
       :*  %pass   /add-prompt
           %agent  [our %mcp-server]
           %poke   %add-prompt
-          !>  ^-  prompt:mcp
-          :*  p.u.nam
-              p.u.tit
-              p.u.des
-              arguments
-              ~
-              !<(_messages-builder:*prompt:mcp vax)
-          ==
+          ::  the agent keeps the hoon text and compiles it when the
+          ::  prompt is read; the slap above only proves it builds
+          =/  built=_messages-builder:*prompt:mcp  !<(_messages-builder:*prompt:mcp vax)
+          !>  ^-  [spec:prompt:mcp source:mcp]
+          :-  [p.u.nam p.u.tit p.u.des arguments ~]
+          [%hoon p.u.msg]
       ==
     ;<  ~  bind:m  (take-poke-ack:io /add-prompt)
     %-  pure:m

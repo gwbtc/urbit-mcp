@@ -1,5 +1,16 @@
 |%
 ::
+::  where a tool's or a prompt's builder comes from.  A gate's type is
+::  bound to the kernel that compiled it, so a gate can never sit in agent
+::  state (it stops nesting at the next kernel update: urbit-mcp#42); the
+::  agent keeps the source and builds the gate again whenever it needs it.
++$  source
+  $+  mcp-feature-source
+  $%  [%default ~]            ::  this desk's /fil, imported with /~
+      [%agent =dude:gall]     ::  another agent's /mcp/tools or /mcp/prompts peek
+      [%hoon src=@t]          ::  hoon text, compiled when called
+  ==
+::
 ++  tool
   =<  tool
   |%
@@ -26,6 +37,15 @@
   +$  thread-builder
     $+  mcp-thread-builder
     $-((map name:parameter argument) shed:khan)
+  ::
+  ::  a tool without its builder: what the agent keeps
+  +$  spec
+    $+  mcp-tool-spec
+    $:  =name
+        =desc
+        =parameters
+        =required
+    ==
   ::
   +$  argument
     $+  mcp-tool-argument
@@ -136,6 +156,16 @@
         arguments=(list argument)
         icons=(list icon)
         messages-builder=$-((map name:argument @t) (list message))
+    ==
+  ::
+  ::  a prompt without its builder: what the agent keeps
+  +$  spec
+    $+  mcp-prompt-spec
+    $:  name=@t
+        title=@t
+        desc=@t
+        arguments=(list argument)
+        icons=(list icon)
     ==
   ::
   ++  argument

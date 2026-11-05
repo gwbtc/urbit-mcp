@@ -21,6 +21,125 @@
 ::
 |%
 ::
+++  tool-spec
+  |=  t=tool:mcp
+  ^-  spec:tool:mcp
+  [name.t desc.t parameters.t required.t]
+::
+++  prompt-spec
+  |=  p=prompt:mcp
+  ^-  spec:prompt:mcp
+  [name.p title.p desc.p arguments.p icons.p]
+::
+::  this desk's own features, as the state keeps them: spec + where the
+::  builder comes from (the /~ import, rebuilt every time the desk builds)
+++  default-tool-entries
+  |=  fil=(list tool:mcp)
+  ^-  (map @t tool-entry)
+  %-  ~(gas by *(map @t tool-entry))
+  (turn fil |=(t=tool:mcp [name.t (tool-spec t) [%default ~]]))
+::
+++  default-prompt-entries
+  |=  fil=(list prompt:mcp)
+  ^-  (map @t prompt-entry)
+  %-  ~(gas by *(map @t prompt-entry))
+  (turn fil |=(p=prompt:mcp [name.p (prompt-spec p) [%default ~]]))
+::
+::  the gate for a tool, built now from where it came from
+++  tool-builder
+  |=  [=bowl:gall defaults=(list tool:mcp) e=tool-entry]
+  ^-  (unit thread-builder:tool:mcp)
+  ?-    -.source.e
+      %default
+    =/  all  defaults
+    |-  ^-  (unit thread-builder:tool:mcp)
+    ?~  all  ~
+    ?:  =(name.spec.e name.i.all)
+      `thread-builder.i.all
+    $(all t.all)
+  ::
+      %hoon
+    =/  res
+      %-  mule  |.
+      !<  thread-builder:tool:mcp
+      %+  slap
+        !>  :*  mcp=mcp
+                spider=spider
+                strand=strand:spider
+                io=io
+                ..zuse
+            ==
+      (ream src.source.e)
+    ?-(-.res %.y `p.res, %.n ~)
+  ::
+      %agent
+    ?.  .^(? %gu /(scot %p our.bowl)/[dude.source.e]/(scot %da now.bowl)/$)
+      ~
+    =/  res
+      %-  mule  |.
+      .^  (list tool:mcp)
+          %gx
+          /(scot %p our.bowl)/[dude.source.e]/(scot %da now.bowl)/mcp/tools/noun
+      ==
+    ?-    -.res
+        %.n  ~
+        %.y
+      =/  all  p.res
+      |-  ^-  (unit thread-builder:tool:mcp)
+      ?~  all  ~
+      ?:  =(name.spec.e name.i.all)
+        `thread-builder.i.all
+      $(all t.all)
+    ==
+  ==
+::
+++  prompt-builder
+  |=  [=bowl:gall defaults=(list prompt:mcp) e=prompt-entry]
+  ^-  (unit _messages-builder:*prompt:mcp)
+  ?-    -.source.e
+      %default
+    =/  all  defaults
+    |-  ^-  (unit _messages-builder:*prompt:mcp)
+    ?~  all  ~
+    ?:  =(name.spec.e name.i.all)
+      `messages-builder.i.all
+    $(all t.all)
+  ::
+      %hoon
+    =/  res
+      %-  mule  |.
+      !<  _messages-builder:*prompt:mcp
+      %+  slap
+        !>  :*  mcp=mcp
+                spider=spider
+                strand=strand:spider
+                io=io
+                ..zuse
+            ==
+      (ream src.source.e)
+    ?-(-.res %.y `p.res, %.n ~)
+  ::
+      %agent
+    ?.  .^(? %gu /(scot %p our.bowl)/[dude.source.e]/(scot %da now.bowl)/$)
+      ~
+    =/  res
+      %-  mule  |.
+      .^  (list prompt:mcp)
+          %gx
+          /(scot %p our.bowl)/[dude.source.e]/(scot %da now.bowl)/mcp/prompts/noun
+      ==
+    ?-    -.res
+        %.n  ~
+        %.y
+      =/  all  p.res
+      |-  ^-  (unit _messages-builder:*prompt:mcp)
+      ?~  all  ~
+      ?:  =(name.spec.e name.i.all)
+        `messages-builder.i.all
+      $(all t.all)
+    ==
+  ==
+::
 ::  replace .old entries with .new entries that share .key
 ++  merge-features
   |*  [new=(list) old=(set) key=$-(* *)]
@@ -404,16 +523,17 @@
   ==
 ::
 ++  install-defaults
-  |=  $:  old=state-2
+  |=  $:  old=state-3
           tools=(list tool:mcp)
           prompts=(list prompt:mcp)
           resources=(list resource:mcp)
           templates=(list template:resource:mcp)
       ==
-  ^-  state-2
+  ^-  state-3
+  ::  on a shared name the default wins, as merge-features did for sets
   %=  old
-    tools      (merge-features tools tools.old |=(t=tool:mcp name.t))
-    prompts    (merge-features prompts prompts.old |=(p=prompt:mcp name.p))
+    tools      (~(uni by tools.old) (default-tool-entries tools))
+    prompts    (~(uni by prompts.old) (default-prompt-entries prompts))
     resources  (merge-features resources resources.old |=(r=resource:mcp uri.r))
     templates  (merge-features templates templates.old |=(t=template:resource:mcp name.t))
   ==
@@ -422,7 +542,7 @@
 ::  classes whose feature set differs between .old and .new
 ::
 ++  load-changed-cards
-  |=  [=bowl:gall old=state-2 new=state-2]
+  |=  [=bowl:gall old=state-3 new=state-3]
   ^-  (list card)
   %-  zing
   ^-  (list (list card))
@@ -444,7 +564,11 @@
   $%  state-0
       state-1
       state-2
+      state-3
   ==
+::
++$  tool-entry    [spec=spec:tool:mcp =source:mcp]
++$  prompt-entry  [spec=spec:prompt:mcp =source:mcp]
 +$  state-0
   $:  %0
       tools=(set tool:mcp)
@@ -467,6 +591,19 @@
   $:  %2
       tools=(set tool:mcp)
       prompts=(set prompt:mcp)
+      resources=(set resource:mcp)
+      templates=(set template:resource:mcp)
+      listeners=(map @ta listener)
+      aqua=state:aq
+      dojo=state:dj
+  ==
+::
+::  no cores in state: tools and prompts are specs plus a source, and
+::  their gates are built again when they are called (urbit-mcp#42)
++$  state-3
+  $:  %3
+      tools=(map @t tool-entry)
+      prompts=(map @t prompt-entry)
       resources=(set resource:mcp)
       templates=(set template:resource:mcp)
       listeners=(map @ta listener)
@@ -502,6 +639,66 @@
       ~
       aqua.old
       dojo.old
+  ==
+::
+::  a %2 state held every tool's gate.  The defaults come back from the
+::  /~ imports; anything else cannot be kept (its gate is all we had) and
+::  is named so it can be imported again.
+++  state-2-to-3
+  |=  old=state-2
+  ^-  [dropped=(list @t) state-3]
+  :-  %+  weld
+        (turn ~(tap in tools.old) |=(t=tool:mcp name.t))
+      (turn ~(tap in prompts.old) |=(p=prompt:mcp name.p))
+  :*  %3
+      ~
+      ~
+      resources.old
+      templates.old
+      listeners.old
+      aqua.old
+      dojo.old
+  ==
+::
+++  to-state-3
+  |=  old=versioned-state
+  ^-  [dropped=(list @t) state-3]
+  ?-  -.old
+    %0  (state-2-to-3 (state-1-to-2 (state-0-to-1 old)))
+    %1  (state-2-to-3 (state-1-to-2 old))
+    %2  (state-2-to-3 old)
+    %3  [~ old]
+  ==
+::
+::  the saved vase does not nest: its gates were typed against the kernel
+::  that compiled them, and this is a newer one.  Take the data by shape
+::  from the %2 noun ([%2 tools prompts resources templates listeners
+::  aqua dojo]); each part on its own, so one that no longer fits costs
+::  only itself.
+++  recover-state
+  |=  raw=*
+  ^-  [dropped=(list @t) state-3]
+  =|  out=state-3
+  ?.  ?=([%2 * * * * * * *] raw)
+    [~ out]
+  =/  names
+    %-  mule  |.
+    %+  weld
+      (turn ~(tap in ;;((set [name=@t *]) +6.raw)) |=([name=@t *] name))
+    (turn ~(tap in ;;((set [name=@t *]) +14.raw)) |=([name=@t *] name))
+  =/  resources  (mule |.(;;((set resource:mcp) +30.raw)))
+  =/  templates  (mule |.(;;((set template:resource:mcp) +62.raw)))
+  =/  listeners  (mule |.(;;((map @ta listener) +126.raw)))
+  =/  aqua       (mule |.(;;(state:aq +254.raw)))
+  =/  dojo       (mule |.(;;(state:dj +255.raw)))
+  ::  ?- on the head refines each branch; ?: would not
+  :-  ?-(-.names %.y p.names, %.n ~)
+  %=  out
+    resources  ?-(-.resources %.y p.resources, %.n ~)
+    templates  ?-(-.templates %.y p.templates, %.n ~)
+    listeners  ?-(-.listeners %.y p.listeners, %.n ~)
+    aqua       ?-(-.aqua %.y p.aqua, %.n *state:aq)
+    dojo       ?-(-.dojo %.y p.dojo, %.n *state:dj)
   ==
 ::
 ::  +dojo-drop: stop a held dojo session's
@@ -563,7 +760,7 @@
 ::
 %-  agent:dbug
 ^-  agent:gall
-=|  state-2
+=|  state-3
 =*  state  -
 %+  verb  |
 |_  =bowl:gall
@@ -708,7 +905,27 @@
 ++  on-load
   |=  =vase
   ^-  (quip card _this)
-  =/  old  !<(versioned-state vase)
+  ::  A gate's type is bound to the kernel that compiled it, so the saved
+  ::  vase stops nesting at a kernel update (urbit-mcp#42: every kernel
+  ::  update rolled back on %load-failed here).  Read it typed when it
+  ::  nests, by shape when it does not; either way the state ends up as
+  ::  specs whose gates are rebuilt on demand.
+  =/  typed=(each versioned-state tang)  (mule |.(!<(versioned-state vase)))
+  =/  [dropped=(list @t) old=state-3]
+    ?-  -.typed
+      %.y  (to-state-3 p.typed)
+      %.n  (recover-state q.vase)
+    ==
+  ::  the defaults come straight back from the /~ imports; only name
+  ::  what cannot
+  =/  defaults=(set @t)
+    %-  silt
+    %+  weld
+      (turn default-tools |=(t=tool:mcp name.t))
+    (turn default-prompts |=(p=prompt:mcp name.p))
+  =.  dropped  (skip dropped |=(n=@t (~(has in defaults) n)))
+  ~?  ?=(^ dropped)
+    [%mcp-server %dropped-on-load dropped %reimport-with 'mcp/import-mcp-tools']
   ::  Rebind /mcp on every load, not just on-init. An upgrade or a
   ::  nuke+revive runs on-load only, and without this card the main
   ::  endpoint 404s while /oauth and /.well-known keep working — the
@@ -728,12 +945,7 @@
         %arvo  %e  %connect
         [[~ ~['.well-known']] dap.bowl]
     ==
-  =/  migrated=state-2
-    ?-  -.old
-      %0  (state-1-to-2 (state-0-to-1 old))
-      %1  (state-1-to-2 old)
-      %2  old
-    ==
+  =/  migrated=state-3  old
   ::  a reload orphans the active run's thread; stop and close it
   =^  cleanup=(list card)  aqua.migrated
     ?~  active.aqua.migrated
@@ -746,7 +958,7 @@
         `'agent reloaded; managed thread stopped'
         &
     ==
-  =/  new=state-2
+  =/  new=state-3
     %:  install-defaults
         migrated
         default-tools
@@ -898,19 +1110,10 @@
                 /(scot %p our.bowl)/[desk]/(scot %da now.bowl)/mcp/tools/noun
             ==
           %=  this
-            tools   %-  silt
-                    %+  weld
-                      imported
-                    %+  murn
-                      ~(tap in tools)
-                    |=  old=tool:mcp
-                    ^-  (unit tool:mcp)
-                    ?:  %+  lien
-                          imported
-                        |=  new=tool:mcp
-                        =(name.new name.old)
-                      ~
-                    `old
+            tools   %-  ~(gas by tools)
+                    %+  turn  imported
+                    |=  t=tool:mcp
+                    [name.t (tool-spec t) [%agent desk]]
           ==
         ::
             %import-prompts
@@ -920,19 +1123,10 @@
                 /(scot %p our.bowl)/[desk]/(scot %da now.bowl)/mcp/prompts/noun
             ==
           %=  this
-            prompts  %-  silt
-                     %+  weld
-                       imported
-                     %+  murn
-                       ~(tap in prompts)
-                     |=  old=prompt:mcp
-                     ^-  (unit prompt:mcp)
-                     ?:  %+  lien
-                           imported
-                         |=  new=prompt:mcp
-                         =(name.new name.old)
-                         ~
-                       `old
+            prompts  %-  ~(gas by prompts)
+                     %+  turn  imported
+                     |=  p=prompt:mcp
+                     [name.p (prompt-spec p) [%agent desk]]
           ==
         ::
             %import-templates
@@ -995,8 +1189,13 @@
         ::
         =/  changed=?
           ?-  mark
-            %add-tool      !(~(has in tools) !<(tool:mcp vase))
-            %add-prompt    !(~(has in prompts) !<(prompt:mcp vase))
+              %add-tool
+            =/  e=tool-entry  !<(tool-entry vase)
+            !=((~(get by tools) name.spec.e) `e)
+          ::
+              %add-prompt
+            =/  e=prompt-entry  !<(prompt-entry vase)
+            !=((~(get by prompts) name.spec.e) `e)
             %add-resource  !(~(has in resources) !<(resource:mcp vase))
             %add-template  !(~(has in templates) !<(template:resource:mcp vase))
           ==
@@ -1005,31 +1204,11 @@
             (broadcast-list-changed bowl listeners kind)
         ?-  mark
           %add-tool
-            =/  new=tool:mcp  !<(tool:mcp vase)
-            %=  this
-              tools   %-  silt
-                      :-  new
-                      %+  murn
-                        ~(tap in tools)
-                      |=  old=tool:mcp
-                      ^-  (unit tool:mcp)
-                      ?:  =(name.new name.old)
-                        ~
-                      `old
-            ==
+            =/  new=tool-entry  !<(tool-entry vase)
+            this(tools (~(put by tools) name.spec.new new))
           %add-prompt
-            =/  new=prompt:mcp  !<(prompt:mcp vase)
-            %=  this
-              prompts  %-  silt
-                       :-  new
-                       %+  murn
-                         ~(tap in prompts)
-                       |=  old=prompt:mcp
-                       ^-  (unit prompt:mcp)
-                       ?:  =(name.new name.old)
-                         ~
-                       `old
-            ==
+            =/  new=prompt-entry  !<(prompt-entry vase)
+            this(prompts (~(put by prompts) name.spec.new new))
           %add-resource
             =/  new=resource:mcp  !<(resource:mcp vase)
             %=  this
@@ -1063,23 +1242,13 @@
           ?(%delete-tool %delete-prompt %delete-resource %delete-template)
         ?>  =(src our):bowl
         =/  key=@t  !<(@t vase)
-        =/  new=state-2
+        =/  new=state-3
           ?-    mark
               %delete-tool
-            %=  state
-              tools  %-  silt
-                     %+  skip
-                       ~(tap in tools)
-                     |=(old=tool:mcp =(key name.old))
-            ==
+            state(tools (~(del by tools) key))
           ::
               %delete-prompt
-            %=  state
-              prompts  %-  silt
-                       %+  skip
-                         ~(tap in prompts)
-                       |=(old=prompt:mcp =(key name.old))
-            ==
+            state(prompts (~(del by prompts) key))
           ::
               %delete-resource
             %=  state
@@ -1438,7 +1607,7 @@
           %+  send-event  eyre-id
           %-  wrap-result
           :^  our.bowl  u.id
-            (tools-to-json ~(tap in tools))
+            (tools-to-json (turn ~(val by tools) |=(e=tool-entry spec.e)))
           `cache-ttl-lists
         ::
             [~ [%s %'resources/list']]
@@ -1462,7 +1631,7 @@
           %+  send-event  eyre-id
           %-  wrap-result
           :^  our.bowl  u.id
-            (prompts-to-json ~(tap in prompts))
+            (prompts-to-json (turn ~(val by prompts) |=(e=prompt-entry spec.e)))
           `cache-ttl-lists
         ::
             [~ [%s %'resources/read']]
@@ -1814,15 +1983,8 @@
           ?~  prompt-name
             :_  this
             (send-event eyre-id (params:error:rpc u.id 'Missing or invalid prompt name' ~))
-          =/  prompt-results
-            %+  murn
-              ~(tap in prompts)
-            |=  =prompt:mcp
-            ^-  (unit prompt:mcp)
-            ?.  =(name.prompt u.prompt-name)
-              ~
-            `prompt
-          ?~  prompt-results
+          =/  entry=(unit prompt-entry)  (~(get by prompts) u.prompt-name)
+          ?~  entry
             :_  this
             %+  send-event
               eyre-id
@@ -1831,16 +1993,17 @@
                 'Prompt not found'
                 `(frond:enjs:format %name s+u.prompt-name)
             ==
-          ?:  (gth 1 (lent prompt-results))
+          =/  builder  (prompt-builder bowl default-prompts u.entry)
+          ?~  builder
             :_  this
             %+  send-event
               eyre-id
             %:  internal:error:rpc
                 u.id
-                'Multiple prompts found'
+                'Prompt cannot be built: its source agent is gone or its hoon does not compile'
                 `(frond:enjs:format %name s+u.prompt-name)
             ==
-          =/  =prompt:mcp  i.prompt-results
+          =/  prompt=spec:prompt:mcp  spec.u.entry
           =/  prompt-args=(map name:argument:prompt:mcp @t)
             %+  fall
               (~(deg jo:jut jon) /params/arguments (om so):dejs:format)
@@ -1853,7 +2016,7 @@
                 %-  pairs:enjs:format
                 :~  ['description' s+desc.prompt]
                   :-  'messages'
-                  %.  (messages-builder.prompt prompt-args)
+                  %.  (u.builder prompt-args)
                   |=  messages=(list message:prompt:mcp)
                   ^-  json
                   :-  %a
@@ -1881,16 +2044,8 @@
             (~(deg jo:jut jon) /params/name so:dejs:format)
           ?~  tool-name
             (send-event eyre-id (params:error:rpc u.id 'Missing or invalid tool name' ~))
-          =/  tool-results
-            %+  murn
-              ~(tap in tools)
-            ::  XX placeholder name
-            |=  foo=tool:mcp
-            ^-  (unit tool:mcp)
-            ?.  =(name.foo u.tool-name)
-              ~
-            `foo
-          ?~  tool-results
+          =/  entry=(unit tool-entry)  (~(get by tools) u.tool-name)
+          ?~  entry
             %+  send-event
               eyre-id
             %:  params:error:rpc
@@ -1898,12 +2053,13 @@
                 'Tool not found'
                 `(frond:enjs:format %name s+u.tool-name)
             ==
-          ?:  (gth 1 (lent tool-results))
+          =/  builder=(unit thread-builder:tool:mcp)  (tool-builder bowl default-tools u.entry)
+          ?~  builder
             %+  send-event
               eyre-id
             %:  internal:error:rpc
                 u.id
-                'Multiple tools found'
+                'Tool cannot be built: its source agent is gone or its hoon does not compile'
                 `(frond:enjs:format %name s+u.tool-name)
             ==
           =/  arguments=(unit json)  (~(get jo:jut jon) /params/arguments)
@@ -1931,7 +2087,7 @@
             :*  %pass  /response/tool/[eyre-id]/(scot %uw (jam u.id))/[mode]
                 %arvo  %k
                 %lard  q.byk.bowl
-                %-  thread-builder.i.tool-results
+                %-  u.builder
                 u.parsed
             ==
           ?.  sse
@@ -1966,13 +2122,13 @@
     ::  .^((list tool:mcp) %gx /=mcp-server=/mcp/tools/noun)
     ::  read tool definitions
       [%x %mcp %tools ~]
-    ``mcp-tools+!>(~(tap in tools))
+    ``mcp-tools+!>((turn ~(val by tools) |=(e=tool-entry spec.e)))
     ::
     ::  .^(json %gx /=mcp-server=/mcp/prompts/json)
     ::  .^((list prompt:mcp) %gx /=mcp-server=/mcp/prompts/noun)
     ::  read prompt definitions
       [%x %mcp %prompts ~]
-    ``mcp-prompts+!>(~(tap in prompts))
+    ``mcp-prompts+!>((turn ~(val by prompts) |=(e=prompt-entry spec.e)))
     ::
     ::  .^(json %gx /=mcp-server=/mcp/resources/json)
     ::  .^((list resource:mcp) %gx /=mcp-server=/mcp/resource/noun)
@@ -1994,14 +2150,14 @@
     %-  some
     %-  some
     :-  %mcp-tools
-    !>  ^-  (list tool:mcp)
+    !>  ^-  (list spec:tool:mcp)
     %+  murn
-      ~(tap in tools)
-    |=  =tool:mcp
-    ^-  (unit tool:mcp)
-    ?.  =(path (scag (lent path) (stab (rap 3 '/' name.tool ~))))
+      ~(val by tools)
+    |=  e=tool-entry
+    ^-  (unit spec:tool:mcp)
+    ?.  =(path (scag (lent path) (stab (rap 3 '/' name.spec.e ~))))
       ~
-    `tool
+    `spec.e
   ==
 ++  on-arvo
   |=  [=(pole knot) =sign-arvo]

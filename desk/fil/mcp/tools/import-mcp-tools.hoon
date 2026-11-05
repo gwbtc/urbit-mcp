@@ -16,8 +16,8 @@
       (pure:m !>([%error %missing-desk ~]))
     ?>  ?=([%string *] u.dek)
     ;<  =bowl:rand  bind:m  get-bowl:io
-    ;<  before=(list tool:mcp)  bind:m
-      (scry:io (list tool:mcp) %gx /mcp-server/mcp/tools/noun)
+    ;<  before=(list spec:tool:mcp)  bind:m
+      (scry:io (list spec:tool:mcp) %gx /mcp-server/mcp/tools/noun)
     =/  agents=(list dude:gall)
       %+  murn
         ~(tap in .^((set [dude:gall ?]) %ge /(scot %p our.bowl)/[p.u.dek]/(scot %da now.bowl)/$))
@@ -48,25 +48,25 @@
       ;<  ~  bind:am  (take-poke-ack:io /import-tools)
       $(remaining t.remaining)
     ;<  ~  bind:m  (take-acks agents)
-    ;<  after=(list tool:mcp)  bind:m
-      (scry:io (list tool:mcp) %gx /mcp-server/mcp/tools/noun)
-    =/  added=(list tool:mcp)
+    ;<  after=(list spec:tool:mcp)  bind:m
+      (scry:io (list spec:tool:mcp) %gx /mcp-server/mcp/tools/noun)
+    =/  added=(list spec:tool:mcp)
       %+  murn  after
-      |=  new=tool:mcp
-      ^-  (unit tool:mcp)
+      |=  new=spec:tool:mcp
+      ^-  (unit spec:tool:mcp)
       ?:  %+  lien  before
-          |=  old=tool:mcp
+          |=  old=spec:tool:mcp
           =(name.new name.old)
         ~
       `new
     ::
     ::  refreshed: same name as before, but the entry changed
-    =/  refreshed=(list tool:mcp)
+    =/  refreshed=(list spec:tool:mcp)
       %+  murn  after
-      |=  new=tool:mcp
-      ^-  (unit tool:mcp)
+      |=  new=spec:tool:mcp
+      ^-  (unit spec:tool:mcp)
       ?.  %+  lien  before
-          |=  old=tool:mcp
+          |=  old=spec:tool:mcp
           &(=(name.new name.old) !=(new old))
         ~
       `new
@@ -76,9 +76,9 @@
     :-  %structured
     %-  pairs:enjs:format
     %-  zing
-    :~  :~  [%imported-tools a+(turn added |=(=tool:mcp s+name.tool))]
+    :~  :~  [%imported-tools a+(turn added |=(tool=spec:tool:mcp s+name.tool))]
         ==
         ?~  refreshed  ~
-        :~  [%refreshed-tools a+(turn refreshed |=(=tool:mcp s+name.tool))]
+        :~  [%refreshed-tools a+(turn refreshed |=(tool=spec:tool:mcp s+name.tool))]
     ==  ==
 ==

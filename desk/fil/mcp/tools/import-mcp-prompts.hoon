@@ -16,8 +16,8 @@
       (pure:m !>([%error %missing-desk ~]))
     ?>  ?=([%string *] u.dek)
     ;<  =bowl:rand  bind:m  get-bowl:io
-    ;<  before=(list prompt:mcp)  bind:m
-      (scry:io (list prompt:mcp) %gx /mcp-server/mcp/prompts/noun)
+    ;<  before=(list spec:prompt:mcp)  bind:m
+      (scry:io (list spec:prompt:mcp) %gx /mcp-server/mcp/prompts/noun)
     =/  agents=(list dude:gall)
       %+  murn
         ~(tap in .^((set [dude:gall ?]) %ge /(scot %p our.bowl)/[p.u.dek]/(scot %da now.bowl)/$))
@@ -48,25 +48,25 @@
       ;<  ~  bind:am  (take-poke-ack:io /import-prompts)
       $(remaining t.remaining)
     ;<  ~  bind:m  (take-acks agents)
-    ;<  after=(list prompt:mcp)  bind:m
-      (scry:io (list prompt:mcp) %gx /mcp-server/mcp/prompts/noun)
-    =/  added=(list prompt:mcp)
+    ;<  after=(list spec:prompt:mcp)  bind:m
+      (scry:io (list spec:prompt:mcp) %gx /mcp-server/mcp/prompts/noun)
+    =/  added=(list spec:prompt:mcp)
       %+  murn  after
-      |=  new=prompt:mcp
-      ^-  (unit prompt:mcp)
+      |=  new=spec:prompt:mcp
+      ^-  (unit spec:prompt:mcp)
       ?:  %+  lien  before
-          |=  old=prompt:mcp
+          |=  old=spec:prompt:mcp
           =(name.new name.old)
         ~
       `new
     ::
     ::  refreshed: same name as before, but the entry changed
-    =/  refreshed=(list prompt:mcp)
+    =/  refreshed=(list spec:prompt:mcp)
       %+  murn  after
-      |=  new=prompt:mcp
-      ^-  (unit prompt:mcp)
+      |=  new=spec:prompt:mcp
+      ^-  (unit spec:prompt:mcp)
       ?.  %+  lien  before
-          |=  old=prompt:mcp
+          |=  old=spec:prompt:mcp
           &(=(name.new name.old) !=(new old))
         ~
       `new
@@ -76,9 +76,9 @@
     :-  %structured
     %-  pairs:enjs:format
     %-  zing
-    :~  :~  [%imported-prompts a+(turn added |=(=prompt:mcp s+name.prompt))]
+    :~  :~  [%imported-prompts a+(turn added |=(prompt=spec:prompt:mcp s+name.prompt))]
         ==
         ?~  refreshed  ~
-        :~  [%refreshed-prompts a+(turn refreshed |=(=prompt:mcp s+name.prompt))]
+        :~  [%refreshed-prompts a+(turn refreshed |=(prompt=spec:prompt:mcp s+name.prompt))]
     ==  ==
 ==
