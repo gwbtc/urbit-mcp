@@ -309,7 +309,6 @@
   (rap 3 'dojo: stopped at: ' i.todo ~)
 --
 ::
-^-  tool:mcp
 :*  'dojo/command'
   '''
   Run input in Dojo through the %sole command-line protocol and return
@@ -345,7 +344,7 @@
       '''
   ==
   ~['command']
-  ^-  thread-builder:tool:mcp
+  ^=  thread-builder
   |=  args=(map name:parameter:tool:mcp argument:tool:mcp)
   ^-  shed:khan
   =/  m  (strand:spider ,vase)

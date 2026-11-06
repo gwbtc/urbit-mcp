@@ -25,7 +25,7 @@
   ::
   +$  thread-builder
     $+  mcp-thread-builder
-    $-((map name:parameter argument) shed:khan)
+    $-((map name:parameter argument) *)
   ::
   +$  argument
     $+  mcp-tool-argument

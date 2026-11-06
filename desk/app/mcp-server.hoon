@@ -1931,6 +1931,16 @@
             :*  %pass  /response/tool/[eyre-id]/(scot %uw (jam u.id))/[mode]
                 %arvo  %k
                 %lard  q.byk.bowl
+                ::
+                ::  a $thread-builder's product must
+                ::  be a $shed:khan that produces a
+                ::  $result:tool:json; typing as such
+                ::  in /sur blocks kernel upgrades where
+                ::  $sign-arvo changes, so we enforce
+                ::  $shed:khan here and $result when we
+                ::  serialize the result to JSON
+                !<  shed:khan
+                :-  -:!>(*shed:khan)
                 %-  thread-builder.i.tool-results
                 u.parsed
             ==
