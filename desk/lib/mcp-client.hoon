@@ -112,32 +112,37 @@
       ==
   =/  m  (strand ,reply)
   ^-  form:m
-  =/  [extra=(list header:mp) ps=(list [@t json])]
+  =/  [url=@t hed=(list header:mp) ps=(list [@t json])]
     ?-    -.conn
         %'2026-07-28'
       =/  name=(unit json)  (~(get by (malt params)) 'name')
-      :_  [['_meta' meta:mcp-2026-07-28] params]
-      %+  headers:mcp-2026-07-28
-        method
-      ?.  =('tools/call' method)  ~
-      ?.  ?=([~ %s *] name)  ~
-      `p.u.name
+      :+  url.conn
+        %+  weld  headers.conn
+        %+  headers:mcp-2026-07-28
+          method
+        ?.  =('tools/call' method)  ~
+        ?.  ?=([~ %s *] name)  ~
+        `p.u.name
+      [['_meta' meta:mcp-2026-07-28] params]
     ::
         %'2025-11-25'
-      :_  params
-      ::  initialize comes before any version or session
-      ?:  =('initialize' method)  ~
-      (headers:mcp-2025-11-25 version.conn session.conn)
+      :+  url.conn
+        ::  initialize comes before any version or session
+        ?:  =('initialize' method)
+          headers.conn
+        %+  weld  headers.conn
+        (headers:mcp-2025-11-25 version.conn session.conn)
+      params
     ==
   %:  post
-      url.conn
-      (weld headers.conn extra)
+      url
+      hed
       %-  pairs:enjs:format
-      ;:  weld
-        ~[['jsonrpc' s+'2.0']]
-        ?~(id ~ ['id' (numb:enjs:format u.id)]~)
-        ~[['method' s+method] ['params' (pairs:enjs:format ps)]]
-      ==
+      ^-  (list [@t json])
+      :+  ['jsonrpc' s+'2.0']
+        ['method' s+method]
+      :-  ['params' (pairs:enjs:format ps)]
+      ?~(id ~ ['id' (numb:enjs:format u.id)]~)
       (bind id numb:enjs:format)
       timeout
   ==

@@ -120,11 +120,13 @@
 ++  tang-text
   |=  =tang
   ^-  @t
-  %+  rap  3
-  %+  join  '\0a'
+  %-  of-wain:format
   %-  zing
   %+  turn  tang
-  |=(=tank (turn (wash [0 80] tank) crip))
+  |=  =tank
+  ^-  wain
+  %+  turn  (wash [0 80] tank)
+  |=(=tape (crip tape))
 --
 ::
 ^-  agent:gall

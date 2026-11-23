@@ -713,6 +713,7 @@
       %^  params:error:rpc  (cue-wire-id rpc-id.pole)
         'Remote tool call rejected'
       `(frond:enjs:format 'error' s+(crip (zing (turn u.p.sign |=(=tank ~(ram re tank))))))
+    ^-  (list card)
     :~  :*  %pass  /response/remote/[eyre-id.pole]/[rpc-id.pole]/[mode.pole]
             %agent  [our.bowl %mcp-proxy]
             %leave  ~
