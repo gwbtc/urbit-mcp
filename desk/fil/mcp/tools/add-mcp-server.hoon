@@ -5,11 +5,10 @@
     '''
     Add a remote MCP server to %mcp-proxy, or replace the URL and
     headers of one with the same id. %mcp-server then lists the
-    remote's tools as <id>/<tool-name>. The remote's tool list loads
-    in the background and refreshes daily.
-
-    Header values you pass here land in this conversation's
-    transcript. Prefer tokens with narrow scopes.
+    remote's tools as <id>/<tool-name>; the list loads in the
+    background and refreshes daily. Header values you pass here land
+    in this conversation's transcript, so prefer tokens with narrow
+    scopes.
     '''
     %-  my
     :~  :-  'id'

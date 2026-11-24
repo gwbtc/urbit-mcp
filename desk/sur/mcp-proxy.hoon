@@ -34,16 +34,19 @@
       [%refresh-mcp-server id=(unit server-id)]
       [%block-tool id=server-id tool=feature]
       [%unblock-tool id=server-id tool=feature]
-      ::  %mcp-server only; .call names the /call/[call] watch
-      ::  that gets the result
-      [%call-tool call=@ta tool=feature arguments=json]
+      ::  %mcp-server only; the result goes to /call/[uuid]
+      [%call-tool uuid=@ta tool=feature arguments=json]
   ==
 ::
-::  %tool-result holds {"result": ...} or {"error": ...}, a json-rpc
-::  response without its id
+::  the outcome of a remote tools/call
++$  result
+  $%  [%result =json]
+      [%error code=@ta message=@t data=(unit json)]
+  ==
+::
 +$  update
   $%  [%tools-changed ~]
-      [%tool-result result=json]
+      [%tool-result =result]
   ==
 ::
 ::  +local-key: blocklist key for %mcp-server's own tools,

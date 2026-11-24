@@ -10,13 +10,6 @@
 ++  grab
   |%
   ++  noun  action
-  ::
-  ::  {"add-mcp-server": {"id": "linear", "url": "https://...",
-  ::                      "headers": [{"key": "...", "value": "..."}]}}
-  ::  {"delete-mcp-server": {"id": "linear"}}
-  ::  {"refresh-mcp-server": {"id": null}}
-  ::  {"block-tool": {"id": "linear", "tool": "linear/create-issue"}}
-  ::  {"unblock-tool": {"id": "linear", "tool": "linear/create-issue"}}
   ++  json
     |=  jon=^json
     ^-  action

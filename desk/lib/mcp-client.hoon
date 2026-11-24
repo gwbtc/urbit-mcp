@@ -11,8 +11,8 @@
 ::
 ::  .version: what a 2025-era server agreed to in initialize
 +$  conn
-  $%  [%'2026-07-28' url=@t headers=(list header:mp)]
-      $:  %'2025-11-25'
+  $%  [%~.2026-07-28 url=@t headers=(list header:mp)]
+      $:  %~.2025-11-25
           url=@t
           headers=(list header:mp)
           version=@t
@@ -27,8 +27,11 @@
       body=(unit json)
   ==
 ::
+::  wait this long for a reply to a handshake or tools/list
 ++  list-timeout  ~s30
+::  wait this long for a reply to tools/call
 ++  call-timeout  ~m5
+::  stop paging tools/list after this many pages
 ++  max-pages     50
 ::
 ++  client-info
@@ -67,11 +70,11 @@
     (pure:m (zing (flop pages)))
   loop(page +(page), cursor next, pages pages)
 ::
-::  +call-tool: call .name with .arguments, producing {"result": ...}
-::  or the remote's {"error": ...}
+::  +call-tool: call .name with .arguments; a json-rpc error from
+::  the remote is a result, not a failure
 ++  call-tool
   |=  [url=@t headers=(list header:mp) name=@t arguments=json]
-  =/  m  (strand ,json)
+  =/  m  (strand ,result:mp)
   ^-  form:m
   ;<  =conn  bind:m  (open url headers)
   ;<  rep=reply  bind:m
@@ -86,10 +89,17 @@
     (fail %mcp-error leaf+"{(trip url)}: http {<status.rep>} with no reply" ~)
   =/  err=(unit json)  (~(get jo:jut u.body.rep) /error)
   ?^  err
-    (pure:m (frond:enjs:format 'error' u.err))
+    =/  code=(unit json)  (~(get jo:jut u.err) /code)
+    =/  msg=(unit json)   (~(get jo:jut u.err) /message)
+    %-  pure:m
+    :*  %error
+        ?.(?=([~ %n *] code) ~.-32603 p.u.code)
+        ?.(?=([~ %s *] msg) 'Remote MCP server error' p.u.msg)
+        (~(get jo:jut u.err) /data)
+    ==
   ?^  msg=(reply-error rep)
     (fail %mcp-error leaf+"{(trip url)}: {(trip u.msg)}" ~)
-  (pure:m (frond:enjs:format 'result' (~(got jo:jut u.body.rep) /result)))
+  (pure:m [%result (~(got jo:jut u.body.rep) /result)])
 ::
 ::  +open: agree on a protocol with the remote
 ++  open
@@ -114,7 +124,7 @@
   ^-  form:m
   =/  [url=@t hed=(list header:mp) ps=(list [@t json])]
     ?-    -.conn
-        %'2026-07-28'
+        %~.2026-07-28
       =/  name=(unit json)  (~(get by (malt params)) 'name')
       :+  url.conn
         %+  weld  headers.conn
@@ -125,7 +135,7 @@
         `p.u.name
       [['_meta' meta:mcp-2026-07-28] params]
     ::
-        %'2025-11-25'
+        %~.2025-11-25
       :+  url.conn
         ::  initialize comes before any version or session
         ?:  =('initialize' method)
@@ -306,14 +316,14 @@
 ::  and _meta that our own +handle-req in %mcp-server expects
 ++  mcp-2026-07-28
   |%
-  ++  version  '2026-07-28'
+  ++  version  ~.2026-07-28
   ::
   ::  +open: ~ unless the remote lists 2026-07-28 in server/discover
   ++  open
     |=  [url=@t headers=(list header:mp)]
     =/  m  (strand ,(unit conn))
     ^-  form:m
-    =/  =conn  [%'2026-07-28' url headers]
+    =/  =conn  [%~.2026-07-28 url headers]
     ;<  rep=reply  bind:m  (send-rpc conn `0 'server/discover' ~ list-timeout)
     %-  pure:m
     ?^  (reply-error rep)
@@ -358,7 +368,7 @@
 ::  the initialize handshake and a session id
 ++  mcp-2025-11-25
   |%
-  ++  version  '2025-11-25'
+  ++  version  ~.2025-11-25
   ::
   ::  +open: initialize, keep Mcp-Session-Id, then send
   ::  notifications/initialized
@@ -366,7 +376,7 @@
     |=  [url=@t headers=(list header:mp)]
     =/  m  (strand ,conn)
     ^-  form:m
-    =/  init=conn  [%'2025-11-25' url headers version ~]
+    =/  init=conn  [%~.2025-11-25 url headers version ~]
     ;<  rep=reply  bind:m
       %:  send-rpc
           init
@@ -381,7 +391,7 @@
     ;<  res=json  bind:m  (result url rep)
     =/  agreed=(unit json)  (~(get jo:jut res) /'protocolVersion')
     =/  =conn
-      :*  %'2025-11-25'
+      :*  %~.2025-11-25
           url
           headers
           ?.(?=([~ %s *] agreed) version p.u.agreed)

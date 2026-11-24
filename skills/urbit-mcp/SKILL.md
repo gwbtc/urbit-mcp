@@ -104,8 +104,8 @@ other MCP servers. A remote tool appears as `<server-id>/<tool-name>`, such as
 - `mcp/delete-mcp-server` removes a server.
 - `mcp/block-tool` and `mcp/unblock-tool` hide or show any tool, local or
   remote, by its full name. Leave out `server` for this ship's own tools.
-- The `mcp/mcp-servers` and `mcp/blocked-tools` resources, and the
-  `mcp/mcp-server` template, show what is configured. No resource returns
+- The `mcp/remote-mcp-servers` and `mcp/blocked-tools` resources, and the
+  `mcp/remote-mcp-server` template, show what is configured. No resource returns
   header values.
 
 Header values you pass to `mcp/add-mcp-server` land in your transcript. Ask

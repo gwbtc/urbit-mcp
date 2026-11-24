@@ -331,8 +331,8 @@
   ^-  card
   [%pass /keepalive/[eyre-id] %arvo %b %wait (add now keepalive-interval)]
 ::
-::  +finish-response: answer a tools/call. over sse, send the json as
-::  an event and close the stream; otherwise, one plain http response
+::  +finish-response: answer a tools/call with one sse event that
+::  closes the stream, or with one plain http response
 ++  finish-response
   |=  [eyre-id=@ta mode=@ta =json]
   ^-  (list card)
@@ -379,25 +379,19 @@
     ~
   [%pass /proxy/updates %agent [our.bowl %mcp-proxy] %watch /updates]~
 ::
-::  +remote-response: answer a forwarded tools/call from the proxy's
-::  {"result": ...} or {"error": ...}. +wrap-result puts our _meta in
-::  place of the remote's and keeps content, structuredContent and
-::  isError
+::  +remote-response: answer a forwarded tools/call. +wrap-result
+::  swaps the remote's _meta for ours
 ++  remote-response
-  |=  [our=@p rpc-id=json res=json]
+  |=  [our=@p rpc-id=json res=result:mcp-proxy]
   ^-  json
-  =/  result=(unit json)  (~(get jo:jut res) /result)
-  ?:  ?=([~ %o *] result)
-    (wrap-result our rpc-id u.result ~)
-  =/  err=json  (~(gut jo:jut res) /error o+~)
-  =/  num=(unit json)  (~(get jo:jut err) /code)
-  =/  msg=(unit json)  (~(get jo:jut err) /message)
-  %-  make-response:rpc
-  :*  %error
-      rpc-id
-      ?.(?=([~ %n *] num) internal-error:code:error:rpc p.u.num)
-      ?.(?=([~ %s *] msg) 'Remote MCP server error' p.u.msg)
-      (~(get jo:jut err) /data)
+  ?-    -.res
+      %error
+    (make-response:rpc [%error rpc-id +.res])
+  ::
+      %result
+    ?.  ?=([%o *] json.res)
+      (internal:error:rpc rpc-id 'Remote MCP server sent a malformed result' ~)
+    (wrap-result our rpc-id json.res ~)
   ==
 ::
 ++  broadcast-list-changed
@@ -714,7 +708,7 @@
         'Remote tool call rejected'
       `(frond:enjs:format 'error' s+(crip (zing (turn u.p.sign |=(=tank ~(ram re tank))))))
     ^-  (list card)
-    :~  :*  %pass  /response/remote/[eyre-id.pole]/[rpc-id.pole]/[mode.pole]
+    :~  :*  %pass   /response/remote/[eyre-id.pole]/[rpc-id.pole]/[mode.pole]
             %agent  [our.bowl %mcp-proxy]
             %leave  ~
         ==
@@ -943,7 +937,7 @@
       ==
       ::  follow %mcp-proxy for remote tool list changes
       ::
-      :*  %pass  /proxy/updates
+      :*  %pass   /proxy/updates
           %agent  [our.bowl %mcp-proxy]
           %watch  /updates
       ==
@@ -2083,16 +2077,17 @@
                 |=(t=json =(`s+u.tool-name (~(get jo:jut t) /name)))
               not-found
             =/  rpc-wire-id=@ta  (scot %uw (jam u.id))
+            =/  uuid=@ta  (scot %uv (sham eyre-id eny.bowl))
             =/  calls=(list card)
-              :~  :*  %pass  /response/remote/[eyre-id]/[rpc-wire-id]/[mode]
+              :~  :*  %pass   /response/remote/[eyre-id]/[rpc-wire-id]/[mode]
                       %agent  [our.bowl %mcp-proxy]
-                      %watch  /call/[eyre-id]
+                      %watch  /call/[uuid]
                   ==
-                  :*  %pass  /remote-call/[eyre-id]/[rpc-wire-id]/[mode]
+                  :*  %pass   /remote-call/[eyre-id]/[rpc-wire-id]/[mode]
                       %agent  [our.bowl %mcp-proxy]
-                      %poke  %mcp-proxy-action
+                      %poke   %mcp-proxy-action
                       !>  ^-  action:mcp-proxy
-                      :^  %call-tool  eyre-id  u.tool-name
+                      :^  %call-tool  uuid  u.tool-name
                       (~(gut jo:jut jon) /params/arguments o+~)
                   ==
               ==
