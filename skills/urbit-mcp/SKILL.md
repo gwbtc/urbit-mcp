@@ -102,6 +102,8 @@ other MCP servers. A remote tool appears as `<server-id>/<tool-name>`, such as
   loads in the background and refreshes daily; `mcp/refresh-mcp-server`
   reloads it now. If a remote is down, its last good list stays.
 - `mcp/delete-mcp-server` removes a server.
+- A remote that turns out to be this ship's own `%mcp-server` is dropped
+  after its first refresh, and `mcp/add-mcp-server` reports it.
 - `mcp/block-tool` and `mcp/unblock-tool` hide or show any tool, local or
   remote, by its full name. Leave out `server` for this ship's own tools.
 - The `mcp/remote-mcp-servers` and `mcp/blocked-tools` resources, and the

@@ -49,6 +49,12 @@
       [%tool-result =result]
   ==
 ::
+::  +server-name: the name %mcp-server reports in serverInfo
+++  server-name
+  |=  our=@p
+  ^-  @t
+  (crip "{<our>} urbit mcp server")
+::
 ::  +local-key: blocklist key for %mcp-server's own tools,
 ::  our @p without the ~ and a -urbit-mcp suffix
 ++  local-key

@@ -150,13 +150,28 @@
     |=  [id=server-id srv=remote-mcp-server]
     (refresh-card q.byk.bowl id srv)
   ::
-  ::  a failed refresh keeps the last good list
-      [%refresh k=@ta ~]
+  ::  a failed refresh keeps the last good list, unless the remote
+  ::  turned out to be our own %mcp-server
+      [%refresh k=@ta h=@ta ~]
     ?>  ?=([%khan %arow *] sign-arvo)
     =/  id=server-id  (slav %t k.pole)
     ?:  ?=(%| -.p.sign-arvo)
-      %-  (slog leaf+"mcp-proxy: refresh of {(trip id)} failed" tang.p.p.sign-arvo)
-      `this
+      =/  =tang  tang.p.p.sign-arvo
+      =/  srv=(unit remote-mcp-server)  (~(get by servers) id)
+      ?.  ?&  ?=(^ tang)
+              =("own-endpoint" ~(ram re i.tang))
+              ?=(^ srv)
+              =(h.pole (url-hash url.u.srv))
+          ==
+        %-  (slog leaf+"mcp-proxy: refresh of {(trip id)} failed" tang)
+        `this
+      %-  (slog leaf+"mcp-proxy: dropped {(trip id)}, this ship's own %mcp-server" ~)
+      =/  before=(list json)  (visible servers blocked)
+      =.  servers  (~(del by servers) id)
+      :_  this
+      ?:  =(before (visible servers blocked))
+        ~
+      ~[tools-changed]
     =+  !<([url=@t tools=(list json)] q.p.p.sign-arvo)
     =/  srv=(unit remote-mcp-server)  (~(get by servers) id)
     ::  drop a list for a server deleted or moved since
@@ -275,7 +290,7 @@
 ++  refresh-card
   |=  [=desk id=server-id srv=remote-mcp-server]
   ^-  card
-  :*  %pass  /refresh/(scot %t id)
+  :*  %pass  /refresh/(scot %t id)/(url-hash url.srv)
       %arvo  %k  %lard  desk
       =/  m  (strand:spider ,vase)
       ^-  form:m
@@ -293,6 +308,12 @@
       ;<  res=result  bind:m  (call-tool:mc url.srv headers.srv name arguments)
       (pure:m !>(res))
   ==
+::
+::  +url-hash: ties a refresh to the url it listed
+++  url-hash
+  |=  url=@t
+  ^-  @ta
+  (scot %uv (sham url))
 ::
 ++  tools-changed
   ^-  card

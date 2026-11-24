@@ -150,7 +150,9 @@ Each tool pokes `%mcp-proxy` with the `%mcp-proxy-action` mark. A server id
 must not be empty, contain `/`, or be `mcp`, `dojo` or `aqua`. Blocked tools
 are stored by full name under their server id. This ship's own tools sit
 under `<our>-urbit-mcp`, our `@p` without the `~`, such as
-`sampel-palnet-urbit-mcp`. Deleting a server keeps its blocklist entry, so a
+`sampel-palnet-urbit-mcp`. A remote whose server name matches this ship's
+own `%mcp-server` is dropped after its first refresh, whatever its URL; other
+servers on the same host, such as Grubbery's, are unaffected. Deleting a server keeps its blocklist entry, so a
 server added again keeps its blocked tools.
 
 A local tool with the same name as a remote one wins. The `/x/mcp/tools`

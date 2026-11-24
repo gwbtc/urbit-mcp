@@ -111,6 +111,17 @@
     (pure:m u.new)
   (open:mcp-2025-11-25 url headers)
 ::
+::  +not-self: fail with %own-endpoint if .name is the name of our
+::  own %mcp-server, so we don't serve our own tools back to ourselves
+++  not-self
+  |=  [url=@t name=(unit json)]
+  =/  m  (strand ,~)
+  ^-  form:m
+  ;<  our=@p  bind:m  get-our:io
+  ?.  =(name `s+(server-name:mp our))
+    (pure:m ~)
+  (fail %own-endpoint leaf+"{(trip url)} is this ship's own %mcp-server" ~)
+::
 ::  +send-rpc: send one json-rpc message over .conn; with no .id,
 ::  a notification
 ++  send-rpc
@@ -325,11 +336,16 @@
     ^-  form:m
     =/  =conn  [%~.2026-07-28 url headers]
     ;<  rep=reply  bind:m  (send-rpc conn `0 'server/discover' ~ list-timeout)
-    %-  pure:m
     ?^  (reply-error rep)
-      ~
-    =/  vs=(unit json)
-      (~(get jo:jut (need body.rep)) /result/'supportedVersions')
+      (pure:m ~)
+    =/  res=json  (~(got jo:jut (need body.rep)) /result)
+    =/  meta=(unit json)  (~(get jo:jut res) /'_meta')
+    =/  info=(unit json)
+      ?.  ?=([~ %o *] meta)  ~
+      (~(get by p.u.meta) 'io.modelcontextprotocol/serverInfo')
+    ;<  ~  bind:m  (not-self url ?~(info ~ (~(get jo:jut u.info) /name)))
+    =/  vs=(unit json)  (~(get jo:jut res) /'supportedVersions')
+    %-  pure:m
     ?.  ?=([~ %a *] vs)
       ~
     ?.  (lien p.u.vs |=(v=json =(v s+version)))
@@ -389,6 +405,7 @@
           list-timeout
       ==
     ;<  res=json  bind:m  (result url rep)
+    ;<  ~  bind:m  (not-self url (~(get jo:jut res) /'serverInfo'/name))
     =/  agreed=(unit json)  (~(get jo:jut res) /'protocolVersion')
     =/  =conn
       :*  %~.2025-11-25

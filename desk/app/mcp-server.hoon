@@ -57,7 +57,7 @@
   |=  our=@p
   ^-  json
   %-  pairs:enjs:format
-  :~  ['name' s+(crip "{<our>} urbit mcp server")]
+  :~  ['name' s+(server-name:mcp-proxy our)]
       ['version' s+'1.0.0']
   ==
 ::
