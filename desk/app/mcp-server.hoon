@@ -1,4 +1,4 @@
-/-  mcp, sole, spider
+/-  mcp, mcp-proxy, sole, spider
 /+  dbug, verb, server, default-agent, pf=pretty-file, io=strandio,
     jut=json-utils, *rpc, beam-uri=uri-beam, fine-uri=uri-fine,
     scry-uri=uri-scry, aq=mcp-aqua, dj=mcp-dojo, ma=mcp-arguments,
@@ -57,7 +57,7 @@
   |=  our=@p
   ^-  json
   %-  pairs:enjs:format
-  :~  ['name' s+(crip "{<our>} urbit mcp server")]
+  :~  ['name' s+(server-name:mcp-proxy our)]
       ['version' s+'1.0.0']
   ==
 ::
@@ -331,6 +331,69 @@
   ^-  card
   [%pass /keepalive/[eyre-id] %arvo %b %wait (add now keepalive-interval)]
 ::
+::  +finish-response: answer a tools/call with one sse event that
+::  closes the stream, or with one plain http response
+++  finish-response
+  |=  [eyre-id=@ta mode=@ta =json]
+  ^-  (list card)
+  ?.  =(%sse mode)
+    (send-event eyre-id json)
+  (weld (send-sse-json eyre-id json) (close-sse eyre-id))
+::
+::  %mcp-proxy serves tools from remote mcp servers and keeps the
+::  blocklist. we read it only while it runs, so this agent works
+::  with %mcp-proxy nuked or missing.
+++  proxy-live
+  |=  =bowl:gall
+  ^-  ?
+  .^(? %gu /(scot %p our.bowl)/mcp-proxy/(scot %da now.bowl)/$)
+::
+::  +proxy-tools: unblocked remote tools, names prefixed by server id
+++  proxy-tools
+  |=  =bowl:gall
+  ^-  (list json)
+  ?.  (proxy-live bowl)
+    ~
+  =/  jon=json
+    .^(json %gx /(scot %p our.bowl)/mcp-proxy/(scot %da now.bowl)/tools/json)
+  ?.(?=([%a *] jon) ~ p.jon)
+::
+::  +proxy-hidden: names of our own tools the blocklist hides
+++  proxy-hidden
+  |=  =bowl:gall
+  ^-  (set @t)
+  ?.  (proxy-live bowl)
+    ~
+  %.  (local-key:mcp-proxy our.bowl)
+  %~  get  ju
+  .^  (map server-id:mcp-proxy (set feature:mcp-proxy))
+      %gx
+      /(scot %p our.bowl)/mcp-proxy/(scot %da now.bowl)/blocked/mcp-proxy-blocked
+  ==
+::
+::  +watch-proxy: follow %mcp-proxy's tool list, unless we already do
+++  watch-proxy
+  |=  =bowl:gall
+  ^-  (list card)
+  ?:  (~(has by wex.bowl) [/proxy/updates our.bowl %mcp-proxy])
+    ~
+  [%pass /proxy/updates %agent [our.bowl %mcp-proxy] %watch /updates]~
+::
+::  +remote-response: answer a forwarded tools/call. +wrap-result
+::  swaps the remote's _meta for ours
+++  remote-response
+  |=  [our=@p rpc-id=json res=result:mcp-proxy]
+  ^-  json
+  ?-    -.res
+      %error
+    (make-response:rpc [%error rpc-id +.res])
+  ::
+      %result
+    ?.  ?=([%o *] json.res)
+      (internal:error:rpc rpc-id 'Remote MCP server sent a malformed result' ~)
+    (wrap-result our rpc-id json.res ~)
+  ==
+::
 ++  broadcast-list-changed
   |=  [=bowl:gall listeners=(map @ta listener) kind=?(%tools %prompts %resources)]
   ^-  (list card:agent:gall)
@@ -579,6 +642,78 @@
   ^-  (quip card _this)
   ?+    pole  (on-agent:def `wire`pole sign)
   ::
+  ::  %mcp-proxy's tool list changed, went away or came back
+      [%proxy %updates ~]
+    ?+    -.sign  `this
+        %fact
+      ?.  =(%mcp-proxy-update p.cage.sign)
+        `this
+      =/  upd=update:mcp-proxy  !<(update:mcp-proxy q.cage.sign)
+      ?.  ?=(%tools-changed -.upd)
+        `this
+      [(broadcast-list-changed bowl listeners %tools) this]
+    ::
+    ::  a nack means the proxy hasn't started yet; try again soon
+        %watch-ack
+      ?^  p.sign
+        :_  this
+        [%pass /proxy/retry %arvo %b %wait (add now.bowl ~s10)]~
+      [(broadcast-list-changed bowl listeners %tools) this]
+    ::
+        %kick
+      :_  this
+      (weld (watch-proxy bowl) (broadcast-list-changed bowl listeners %tools))
+    ==
+  ::
+  ::  the result of a tools/call forwarded to %mcp-proxy
+      [%response %remote eyre-id=@ta rpc-id=@ta mode=@ta ~]
+    =/  rpc-id=json  (cue-wire-id rpc-id.pole)
+    ?+    -.sign  `this
+        %fact
+      ?.  =(%mcp-proxy-update p.cage.sign)
+        `this
+      =/  upd=update:mcp-proxy  !<(update:mcp-proxy q.cage.sign)
+      ?.  ?=(%tool-result -.upd)
+        `this
+      :_  this
+      %^  finish-response  eyre-id.pole  mode.pole
+      (remote-response our.bowl rpc-id result.upd)
+    ::
+        %watch-ack
+      ?~  p.sign
+        `this
+      :_  this
+      %^  finish-response  eyre-id.pole  mode.pole
+      (internal:error:rpc rpc-id 'Remote MCP proxy refused the call' ~)
+    ::
+    ::  the proxy kicks us once it has sent the result; a kick from
+    ::  a proxy that is no longer running means it died mid-call
+        %kick
+      ?:  (proxy-live bowl)
+        `this
+      :_  this
+      %^  finish-response  eyre-id.pole  mode.pole
+      (internal:error:rpc rpc-id 'Remote MCP proxy stopped during the call' ~)
+    ==
+  ::
+      [%remote-call eyre-id=@ta rpc-id=@ta mode=@ta ~]
+    ?.  ?=(%poke-ack -.sign)
+      `this
+    ?~  p.sign
+      `this
+    :_  this
+    %+  weld
+      %^  finish-response  eyre-id.pole  mode.pole
+      %^  params:error:rpc  (cue-wire-id rpc-id.pole)
+        'Remote tool call rejected'
+      `(frond:enjs:format 'error' s+(crip (zing (turn u.p.sign |=(=tank ~(ram re tank))))))
+    ^-  (list card)
+    :~  :*  %pass   /response/remote/[eyre-id.pole]/[rpc-id.pole]/[mode.pole]
+            %agent  [our.bowl %mcp-proxy]
+            %leave  ~
+        ==
+    ==
+  ::
   ::  relay a held dojo session to the threads watching it
       [%dojo ses=@ta ~]
     ?-    -.sign
@@ -755,13 +890,16 @@
         default-templates
     ==
   :_  this(state new)
-  %+  weld
+  ;:  weld
     ^-  (list card)
     :~  mcp-card
         oauth-card
         well-known-card
     ==
-  (weld cleanup (load-changed-cards bowl migrated new))
+    (watch-proxy bowl)
+    cleanup
+    (load-changed-cards bowl migrated new)
+  ==
 ::
 ++  on-init
   ^-  (quip card _this)
@@ -796,6 +934,12 @@
       :*  %pass  /eyre/connect/oauth
           %arvo  %e  %connect
           [[~ ~['oauth']] dap.bowl]
+      ==
+      ::  follow %mcp-proxy for remote tool list changes
+      ::
+      :*  %pass   /proxy/updates
+          %agent  [our.bowl %mcp-proxy]
+          %watch  /updates
       ==
   ==
 ::
@@ -1434,11 +1578,32 @@
           ==
         ::
             [~ [%s %'tools/list']]
+          ::  hide our blocked tools, then append %mcp-proxy's remote
+          ::  ones; a remote tool with a local tool's name loses
+          =/  hidden=(set @t)  (proxy-hidden bowl)
+          =/  names=(set @t)  (~(run in tools) |=(t=tool:mcp name.t))
+          =/  listed=json
+            %-  tools-to-json
+            (skip ~(tap in tools) |=(t=tool:mcp (~(has in hidden) name.t)))
+          ?>  ?=([%o *] listed)
+          =/  remote=(list json)
+            %+  skip  (proxy-tools bowl)
+            |=  tool=json
+            =/  name=(unit json)  (~(get jo:jut tool) /name)
+            ?.  ?=([~ %s *] name)
+              &
+            ?.  (~(has in names) p.u.name)
+              |
+            %.  &
+            (slog leaf+"mcp: remote tool {(trip p.u.name)} shadowed by a local tool" ~)
+          =/  local=(list json)
+            =/  got=(unit json)  (~(get by p.listed) 'tools')
+            ?.(?=([~ %a *] got) ~ p.u.got)
           :_  this
           %+  send-event  eyre-id
           %-  wrap-result
           :^  our.bowl  u.id
-            (tools-to-json ~(tap in tools))
+            o+(~(put by p.listed) 'tools' a+(weld local remote))
           `cache-ttl-lists
         ::
             [~ [%s %'resources/list']]
@@ -1881,6 +2046,21 @@
             (~(deg jo:jut jon) /params/name so:dejs:format)
           ?~  tool-name
             (send-event eyre-id (params:error:rpc u.id 'Missing or invalid tool name' ~))
+          ::  When the client accepts SSE (the MCP streamable-HTTP spec
+          ::  says it must for POST), answer with an SSE stream and ping
+          ::  it on a timer so long-running tools don't lose the
+          ::  connection before the result arrives.
+          ::
+          =/  sse=?  ?=(^ (find "text/event-stream" (trip u.accept)))
+          =/  mode=@ta  ?:(sse %sse %plain)
+          =/  not-found=(list card)
+            %+  send-event
+              eyre-id
+            %:  params:error:rpc
+                u.id
+                'Tool not found'
+                `(frond:enjs:format %name s+u.tool-name)
+            ==
           =/  tool-results
             %+  murn
               ~(tap in tools)
@@ -1890,14 +2070,32 @@
             ?.  =(name.foo u.tool-name)
               ~
             `foo
+          ::  not ours: forward it to %mcp-proxy if it lists the tool.
+          ::  watch for the result first, then poke the call
           ?~  tool-results
-            %+  send-event
-              eyre-id
-            %:  params:error:rpc
-                u.id
-                'Tool not found'
-                `(frond:enjs:format %name s+u.tool-name)
-            ==
+            ?.  %+  lien  (proxy-tools bowl)
+                |=(t=json =(`s+u.tool-name (~(get jo:jut t) /name)))
+              not-found
+            =/  rpc-wire-id=@ta  (scot %uw (jam u.id))
+            =/  uuid=@ta  (scot %uv (sham eyre-id eny.bowl))
+            =/  calls=(list card)
+              :~  :*  %pass   /response/remote/[eyre-id]/[rpc-wire-id]/[mode]
+                      %agent  [our.bowl %mcp-proxy]
+                      %watch  /call/[uuid]
+                  ==
+                  :*  %pass   /remote-call/[eyre-id]/[rpc-wire-id]/[mode]
+                      %agent  [our.bowl %mcp-proxy]
+                      %poke   %mcp-proxy-action
+                      !>  ^-  action:mcp-proxy
+                      :^  %call-tool  uuid  u.tool-name
+                      (~(gut jo:jut jon) /params/arguments o+~)
+                  ==
+              ==
+            ?.  sse
+              calls
+            :(weld (send-sse-start eyre-id) ~[(set-keepalive now.bowl eyre-id)] calls)
+          ?:  (~(has in (proxy-hidden bowl)) u.tool-name)
+            not-found
           ?:  (gth 1 (lent tool-results))
             %+  send-event
               eyre-id
@@ -1920,13 +2118,6 @@
           ?~  parsed
             (send-event eyre-id (params:error:rpc u.id 'Invalid tool arguments: numbers must be unsigned decimal integers' ~))
           ^-  (list card)
-          ::  When the client accepts SSE (the MCP streamable-HTTP spec
-          ::  says it must for POST), answer with an SSE stream and ping
-          ::  it on a timer so long-running tools don't lose the
-          ::  connection before the thread finishes.
-          ::
-          =/  sse=?  ?=(^ (find "text/event-stream" (trip u.accept)))
-          =/  mode=@ta  ?:(sse %sse %plain)
           =/  run-tool=card
             :*  %pass  /response/tool/[eyre-id]/(scot %uw (jam u.id))/[mode]
                 %arvo  %k
@@ -2036,6 +2227,10 @@
       (aqua-finish bowl aqua id.pole %failed `'completion wake failed' &)
     [cards this]
   ::
+      [%proxy %retry ~]
+    ?>  ?=([%behn %wake *] sign-arvo)
+    [(watch-proxy bowl) this]
+  ::
       [%keepalive eyre-id=@ta ~]
     ?>  ?=([%behn %wake *] sign-arvo)
     ::  Ping only while the response channel is still open; once the
@@ -2061,17 +2256,6 @@
     `this
   ::
       [%response %tool eyre-id=@ta rpc-id=@ta mode=@ta ~]
-    ::  +finish: deliver the tool result. Over SSE, send the JSON as an
-    ::  event and close the stream; otherwise, one plain HTTP response.
-    ::
-    =/  finish
-      |=  =json
-      ^-  (list card)
-      ?.  =(%sse mode.pole)
-        (send-event eyre-id.pole json)
-      %+  weld
-        (send-sse-json eyre-id.pole json)
-      (close-sse eyre-id.pole)
     =/  rpc-id=json  (cue-wire-id rpc-id.pole)
     ?+  sign-arvo
       (on-arvo:def pole sign-arvo)
@@ -2079,13 +2263,13 @@
         [%khan %arow *]
       ?:  ?=(%.n -.p.sign-arvo)
         :_  this
-        %-  finish
+        %^  finish-response  eyre-id.pole  mode.pole
         (internal:error:rpc rpc-id (crip (print-tang-to-wain tang.p.p.sign-arvo)) ~)
       ?>  ?=([%khan %arow %.y %noun *] sign-arvo)
       =/  [%khan %arow %.y %noun =vase]  sign-arvo
       =/  =response:tool:mcp  !<(response:tool:mcp vase)
         :_  this
-        %-  finish
+        %^  finish-response  eyre-id.pole  mode.pole
         ?-    -.response
             %error
           %-  wrap-result

@@ -27,6 +27,8 @@ desk revision first via `arvo/clay/revision`).
 | `mcp/docs/strandio` | `https://docs.urbit.org/urbit-os/base/threads/strandio.md` | Strandio thread API docs |
 | `mcp/spider` | `beam://=/base/=/sur/spider/hoon` | Spider structures |
 | `mcp/strandio` | `beam://=/base/=/lib/strandio/hoon` | Strandio library source |
+| `mcp/remote-mcp-servers` | `scry://gx/mcp-proxy/servers/json` | Remote MCP servers and their unblocked tools |
+| `mcp/blocked-tools` | `scry://gx/mcp-proxy/blocked/json` | Tools hidden from `tools/list`, by server id |
 
 Read `mcp/strandio` and `mcp/spider` before writing a thread-builder — they
 define the API your tool code runs against.
