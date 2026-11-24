@@ -121,7 +121,7 @@
     :-  %a
     %+  turn  ~(tap by servers)
     |=  [id=server-id srv=remote-mcp-server]
-    (server-json id srv blocked)
+    (server-json id srv(tools (unblocked blocked id tools.srv)))
   ::
   ::  .^(json %gx /=mcp-proxy=/server/(scot %t id)/json)
       [%x %server k=@ta ~]
@@ -131,7 +131,8 @@
     =/  srv=(unit remote-mcp-server)  (~(get by servers) u.id)
     ?~  srv
       [~ ~]
-    ``json+!>((server-json u.id u.srv blocked))
+    =/  tools=(list json)  (unblocked blocked u.id tools.u.srv)
+    ``json+!>((server-json u.id u.srv(tools tools)))
   ==
 ::
 ++  on-agent  on-agent:def
@@ -277,14 +278,14 @@
 ::
 ::  +server-json: header keys but no values
 ++  server-json
-  |=  [id=server-id srv=remote-mcp-server blocked=(map server-id (set feature))]
+  |=  [id=server-id srv=remote-mcp-server]
   ^-  json
   %-  pairs:enjs:format
   :~  ['id' s+id]
       ['knot' s+(scot %t id)]
       ['url' s+url.srv]
       ['headers' a+(turn headers.srv |=(h=header s+key.h))]
-      ['tools' a+(unblocked blocked id tools.srv)]
+      ['tools' a+tools.srv]
   ==
 ::
 ++  refresh-card
